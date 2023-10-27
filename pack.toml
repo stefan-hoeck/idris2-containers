@@ -1,0 +1,4 @@
+[custom.all.containers]
+type   = "local"
+path   = "."
+ipkg   = "containers.ipkg"

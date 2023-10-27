@@ -1,0 +1,11 @@
+package containers
+
+authors    = "stefan-hoeck"
+brief      = "Basic Tree and Queue data structures"
+version    = 0.6.0
+sourcedir  = "src"
+depends    = base         >= 0.6.0
+           , elab-util
+
+modules = Data.Queue
+        , Data.Tree
