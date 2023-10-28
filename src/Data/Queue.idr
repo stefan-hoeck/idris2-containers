@@ -42,6 +42,11 @@ export
 enqueue : Queue a -> a -> Queue a
 enqueue (Q f b) v = Q f (b :< v)
 
+||| Append a list of values at the back of the queue. O(1)
+export
+enqueueAll : Queue a -> List a -> Queue a
+enqueueAll (Q f b) vs = Q f (b <>< vs)
+
 ||| Take a value from the front of the queue.
 |||
 ||| In case of the front being empty, this transfers
