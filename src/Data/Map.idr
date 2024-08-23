@@ -1,11 +1,9 @@
+||| Finite Maps
 module Data.Map
 
 import Data.Map.Internal
 
-import Control.Monad.Identity
 import Data.List
-import Data.String
-import Derive.Prelude
 
 %hide Prelude.null
 
@@ -21,9 +19,40 @@ empty : Map k a
 empty = Tip
 
 --------------------------------------------------------------------------------
+--          Folds
+--------------------------------------------------------------------------------
+
+||| Fold the values in the map using the given left-associative binary operator. O(n)
+public export
+foldl : (v -> w -> v) -> v -> Map k w -> v
+foldl f z Tip             = z
+foldl f z (Bin _ _ x l r) = foldl f (f (foldl f z l) x) r
+
+||| Fold the values in the map using the given right-associative binary operator. O(n)
+public export
+foldr : (v -> w -> w) -> w -> Map k v -> w
+foldr f z Tip             = z 
+foldr f z (Bin _ _ x l r) = foldr f (f x (foldr f z r)) l
+
+||| Fold the keys and values in the map using the given left-associative binary operator. O(n)
+public export
+foldlWithKey : (v -> k -> w -> v) -> v -> Map k w -> v
+foldlWithKey f z Tip              = z
+foldlWithKey f z (Bin _ kx x l r) = foldlWithKey f (f (foldlWithKey f z l) kx x) r
+
+||| Fold the keys and values in the map using the given right-associative binary operator. O(n)
+public export
+foldrWithKey : (k -> v -> w -> w) -> w -> Map k v -> w
+foldrWithKey f z Tip              = z
+foldrWithKey f z (Bin _ kx x l r) = foldrWithKey f (f kx x (foldrWithKey f z r)) l
+
+--------------------------------------------------------------------------------
 --          Insertion
 --------------------------------------------------------------------------------
 
+||| Insert a new key and value in the map.
+||| If the key is already present in the map, the associated value is
+||| replaced with the supplied value. O(log n)
 public export
 insert : Eq (Map k v) => Eq v => Ord k => k -> v -> Map k v -> Map k v
 insert kx0 vx0 m = go kx0 kx0 vx0 m
@@ -73,6 +102,11 @@ insertR kx0 = go kx0 kx0
         EQ =>
           t
 
+||| Insert with a function, combining new value and old value.
+||| insertWith f key value mp
+||| will insert the pair (key, value) into mp if key does
+||| not exist in the map. If the key does exist, the function will
+||| insert the pair (key, f new_value old_value). O(log n)
 public export
 insertWith : Ord k => (v -> v -> v) -> k -> v -> Map k v -> Map k v
 insertWith = go
@@ -88,6 +122,36 @@ insertWith = go
         EQ =>
           Bin sy kx (f x y) l r
 
+insertWithR : Ord k => (v -> v -> v) -> k -> v -> Map k v -> Map k v
+insertWithR = go
+  where
+    go : (v -> v -> v) -> k -> v -> Map k v -> Map k v
+    go _ kx x Tip               = singleton kx x
+    go f kx x (Bin sy ky y l r) =
+      case compare kx ky of
+        LT =>
+          balanceL ky y (go f kx x l) r
+        GT =>
+          balanceR ky y l (go f kx x r)
+        EQ =>
+          Bin sy ky (f y x) l r
+
+insertWithKeyR : Ord k => (k -> v -> v -> v) -> k -> v -> Map k v -> Map k v
+insertWithKeyR = go
+  where
+    go : (k -> v -> v -> v) -> k -> v -> Map k v -> Map k v
+    go _ kx x Tip               = singleton kx x
+    go f kx x (Bin sy ky y l r) =
+      case compare kx ky of
+        LT => balanceL ky y (go f kx x l) r
+        GT => balanceR ky y l (go f kx x r)
+        EQ => Bin sy ky (f ky y x) l r
+
+||| Insert with a function, combining key, new value and old value.
+||| insertWithKey f key value mp
+||| will insert the pair (key, value) into mp if key does
+||| not exist in the map. If the key does exist, the function will
+||| insert the pair (key,f key new_value old_value). O(log n)
 public export
 insertWithKey : Ord k => (k -> v -> v -> v) -> k -> v -> Map k v -> Map k v
 insertWithKey = go
@@ -100,6 +164,10 @@ insertWithKey = go
         GT => balanceR ky y l (go f kx x r)
         EQ => Bin sy kx (f kx x y) l r
 
+||| Combines insert operation with old value retrieval.
+||| The expression (insertLookupWithKey f k x map)
+||| is a pair where the first element is equal to (lookup k map)
+||| and the second element equal to (insertWithKey f k x map). O(log n)
 public export
 insertLookupWithKey : Ord k => (k -> v -> v -> v) -> k -> v -> Map k v -> (Maybe v,Map k v)
 insertLookupWithKey f0 k0 x0 = go f0 k0 x0
@@ -120,6 +188,8 @@ insertLookupWithKey f0 k0 x0 = go f0 k0 x0
 --          Deletion/Update
 --------------------------------------------------------------------------------
 
+||| Delete a key and its value from the map. When the key is not
+||| a member of the map, the original map is returned. O(log n)
 public export
 delete : Eq (Map k v) => Eq k => Ord k => k -> Map k v -> Map k v
 delete = go
@@ -143,6 +213,8 @@ delete = go
         EQ =>
           glue l r
 
+||| Adjust a value at a specific key. When the key is not
+||| a member of the map, the original map is returned. O(log n)
 public export
 adjustWithKey : Ord k => (k -> v -> v) -> k -> Map k v -> Map k v
 adjustWithKey = go
@@ -158,10 +230,16 @@ adjustWithKey = go
         EQ =>
           Bin sx kx (f kx x) l r
 
+||| Update a value at a specific key with the result of the provided function.
+||| When the key is not a member of the map, the original map is returned. O(log n)
 public export
 adjust : Ord k => (v -> v) -> k -> Map k v -> Map k v
 adjust f = adjustWithKey (\_, x => f x)
 
+||| The expression (updateWithKey f k map) updates the
+||| value x at k (if it is in the map). If (f k x) is Nothing,
+||| the element is deleted. If it is (Just y), the key k is bound
+||| to the new value y. O(log n)
 public export
 updateWithKey : Ord k => (k -> v -> Maybe v) -> k -> Map k v -> Map k v
 updateWithKey = go
@@ -181,10 +259,16 @@ updateWithKey = go
             Nothing =>
               glue l r
 
+||| The expression (update f k map) updates the value x
+||| at k (if it is in the map). If (f x) is Nothing, the element is
+||| deleted. If it is (Just y), the key k is bound to the new value y. O(log n)
 public export
 update : Ord k => (v -> Maybe v) -> k -> Map k v -> Map k v
 update f = updateWithKey (\_, x => f x)
 
+||| Lookup and update. See also updateWithKey.
+||| The function returns changed value, if it is updated.
+||| Returns the original key value if the map entry is deleted. O(log n)
 public export
 updateLookupWithKey : Ord k => (k -> v -> Maybe v) -> k -> Map k v -> (Maybe v,Map k v)
 updateLookupWithKey f0 k0 = go f0 k0
@@ -209,6 +293,8 @@ updateLookupWithKey f0 k0 = go f0 k0
              let glued = glue l r
                in (Just x,glued)
 
+||| The expression (alter f k map) alters the value x at k, or absence thereof.
+||| alter can be used to insert, delete, or update a value in a Map. O(log n)
 public export
 alter : Ord k => (Maybe v -> Maybe v) -> k -> Map k v -> Map k v
 alter = go
@@ -233,6 +319,9 @@ alter = go
 --          Query
 --------------------------------------------------------------------------------
 
+||| Lookup the value at a key in the map.
+||| The function will return the corresponding value as (Just value),
+||| or Nothing if the key isn't in the map. O(log n)
 public export
 lookup : Ord k => k -> Map k v -> Maybe v
 lookup = go
@@ -246,10 +335,13 @@ lookup = go
         GT => go k r
         EQ => Just x
 
+||| Find the value at a key.
+||| Returns Nothing when the element can not be found. O(log n)
 public export
 (!?) : Ord k => Map k v -> k -> Maybe v
 (!?) m k = lookup k m
 
+||| Is the key a member of the map? See also notMember. O(log n)
 public export
 member : Ord k => k -> Map k v -> Bool
 member _ Tip              = False
@@ -259,10 +351,13 @@ member k (Bin _ kx _ l r) =
     GT => member k r
     EQ => True
 
+||| Is the key not a member of the map? See also member. O(log n)
 public export
 notMember : Ord k => k -> Map k v -> Bool
 notMember k m = not $ member k m
 
+||| Find the value at a key.
+||| Calls idris_crash when the element can not be found. O(log n)
 public export
 find : Ord k => k -> Map k v -> v
 find _ Tip              = assert_total $ idris_crash "Map.!: given key is not an element in the map"
@@ -272,10 +367,15 @@ find k (Bin _ kx x l r) =
     GT => find k r
     EQ => x
 
+||| Find the value at a key.
+||| Calls idris_crash when the element can not be found. O(log n)
 public export
 (!!) : Ord k => Map k v -> k -> v
 (!!) m k = find k m
 
+||| The expression (findWithDefault def k map) returns
+||| the value at key k or returns default value def
+||| when the key is not in the map. O(log n)
 public export
 findWithDefault : Ord k => v -> k -> Map k v -> v
 findWithDefault def _ Tip              = def
@@ -285,6 +385,8 @@ findWithDefault def k (Bin _ kx x l r) =
     GT => findWithDefault def k r
     EQ => x
 
+||| Find largest key smaller than the given one and return the
+||| corresponding (key, value) pair. O(log n)
 public export
 lookupLT : Ord k => k -> Map k v -> Maybe (k,v)
 lookupLT = goNothing
@@ -302,6 +404,8 @@ lookupLT = goNothing
         True  => goNothing k l
         False => goJust k kx x r
 
+||| Find smallest key greater than the given one and return the
+||| corresponding (key, value) pair. O(log n)
 public export
 lookupGT : Ord k => k -> Map k v -> Maybe (k,v)
 lookupGT = goNothing
@@ -319,6 +423,8 @@ lookupGT = goNothing
         True  => goJust k kx x l
         False => goNothing k r
 
+||| Find largest key smaller or equal to the given one and return
+||| the corresponding (key, value) pair. O(log n)
 public export
 lookupLE : Ord k => k -> Map k v -> Maybe (k,v)
 lookupLE = goNothing
@@ -338,6 +444,8 @@ lookupLE = goNothing
         EQ => Just (kx,x)
         GT => goJust k kx x r
 
+||| Find smallest key greater or equal to the given one and return
+||| the corresponding (key, value) pair. O(log n)
 public export
 lookupGE : Ord k => k -> Map k v -> Maybe (k,v)
 lookupGE = goNothing
@@ -361,6 +469,7 @@ lookupGE = goNothing
 --          Size
 --------------------------------------------------------------------------------
 
+||| Is the map empty? O(1)
 public export
 null : Map k v -> Bool
 null Tip = True
@@ -386,6 +495,8 @@ splitMember k0 m = go k0 m
                     in (link kx x l lt,z,gt)
             EQ => (l,True,r)
 
+||| Decompose a map into pieces based on the structure of the underlying tree.
+||| This function is useful for consuming a map in parallel. O(1)
 public export
 splitRoot : Map k v -> List (Map k v)
 splitRoot orig =
@@ -395,6 +506,8 @@ splitRoot orig =
     Bin _ k v l r =>
       [l,singleton k v,r]
 
+||| The expression (splitLookup k map) splits a map just
+||| like split but also returns lookup k map. O(log n)
 public export
 splitLookup : Ord k => k -> Map k v -> (Map k v,Maybe v,Map k v)
 splitLookup k0 m = go k0 m
@@ -412,6 +525,9 @@ splitLookup k0 m = go k0 m
                   in (link kx x l lt,z,gt)
           EQ => (l,Just x,r)
 
+||| The expression (split k map) is a pair (map1,map2) where
+||| the keys in map1 are smaller than k and the keys in map2 larger than k.
+||| Any key equal to k is found in neither map1 nor map2. O(log n)
 public export
 split : Ord k => k -> Map k v -> (Map k v,Map k v)
 split k0 t0 = go k0 t0
@@ -429,6 +545,7 @@ split k0 t0 = go k0 t0
                     in (link kx x l lt,gt)
             EQ => (l,r)
 
+||| Filter all keys/values that satisfy the predicate. O(n)
 public export
 filterWithKey : Eq (Map k v) => (k -> v -> Bool) -> Map k v -> Map k v
 filterWithKey _ Tip                = Tip
@@ -443,10 +560,14 @@ filterWithKey p t@(Bin _ kx x l r) =
     False =>
       link2 (filterWithKey p l) (filterWithKey p r)
 
+||| Filter all values that satisfy the predicate. O(n)
 public export
 filter : Eq (Map k v) => (v -> Bool) -> Map k v -> Map k v
 filter p m = filterWithKey (\_, x => p x) m
 
+||| Partition the map according to a predicate. The first
+||| map contains all elements that satisfy the predicate, the second all
+||| elements that fail the predicate. See also split. O(n)
 public export
 partitionWithKey : Eq (Map k v) => (k -> v -> Bool) -> Map k v -> (Map k v,Map k v)
 partitionWithKey p0 t0 = go p0 t0
@@ -472,6 +593,9 @@ partitionWithKey p0 t0 = go p0 t0
                 link kx x (snd $ go p l) (snd $ go p r)
           )
 
+||| Take while a predicate on the keys holds.
+||| The user is responsible for ensuring that for all keys j and k in the map,
+||| j < k ==> p j >= p k. See note at spanAntitone. O(log n)
 public export
 takeWhileAntitone : (k -> Bool) -> Map k v -> Map k v
 takeWhileAntitone _ Tip              = Tip
@@ -482,6 +606,9 @@ takeWhileAntitone p (Bin _ kx x l r) =
     False =>
       takeWhileAntitone p l
 
+||| Drop while a predicate on the keys holds.
+||| The user is responsible for ensuring that for all keys j and k in the map,
+||| j < k ==> p j >= p k. See note at spanAntitone. O(log n)
 public export
 dropWhileAntitone : (k -> Bool) -> Map k v -> Map k v
 dropWhileAntitone _ Tip              = Tip
@@ -492,6 +619,9 @@ dropWhileAntitone p (Bin _ kx x l r) =
     False =>
       link kx x (dropWhileAntitone p l) r
 
+||| Divide a map at the point where a predicate on the keys stops holding.
+||| The user is responsible for ensuring that for all keys j and k in the map,
+||| j < k ==> p j>= p k. O(log n)
 public export
 spanAntitone : (k -> Bool) -> Map k v -> (Map k v, Map k v)
 spanAntitone p0 m = go p0 m
@@ -507,6 +637,7 @@ spanAntitone p0 m = go p0 m
           let (u,v) = go p l
             in (u,link kx x v r)
 
+||| Map keys/values and collect the Just results. O(n)
 public export
 mapMaybeWithKey : (k -> a -> Maybe b) -> Map k a -> Map k b
 mapMaybeWithKey _ Tip              = Tip
@@ -517,10 +648,12 @@ mapMaybeWithKey f (Bin _ kx x l r) =
     Nothing =>
       link2 (mapMaybeWithKey f l) (mapMaybeWithKey f r)
 
+||| Map values and collect the Just results. O(n)
 public export
 mapMaybe : (a -> Maybe b) -> Map k a -> Map k b
 mapMaybe f = mapMaybeWithKey (\_, x => f x)
 
+||| Map keys/values and separate the Left and Right results. O(n)
 public export
 mapEitherWithKey : (k -> a -> Either b c) -> Map k a -> (Map k b, Map k c)
 mapEitherWithKey f0 t0 = go f0 t0
@@ -532,65 +665,556 @@ mapEitherWithKey f0 t0 = go f0 t0
         Left  y => (link kx y (fst $ go f l) (fst $ go f r),link2 (snd $ go f l) (snd $ go f r))
         Right z => (link2 (fst $ go f l) (fst $ go f r),link kx z (snd $ go f l) (snd $ go f r))
 
+||| Map values and separate the Left and Right results. O(n)
 public export
 mapEither : (a -> Either b c) -> Map k a -> (Map k b, Map k c)
 mapEither f m = mapEitherWithKey (\_, x => f x) m
 
-{-
+--------------------------------------------------------------------------------
+--          Submap
+--------------------------------------------------------------------------------
+
+submap' : Ord a => (b -> c -> Bool) -> Map a b -> Map a c -> Bool
+submap' _ Tip _              = True
+submap' _ _   Tip            = False
+submap' f (Bin 1 kx x _ _) t =
+  case lookup kx t of
+    Just y  =>
+      f x y
+    Nothing =>
+      False
+submap' f (Bin _ kx x l r) t =
+  let (lt,found,gt) = splitLookup kx t
+    in case found of
+         Nothing =>
+           False
+         Just y  =>
+           f x y && size l <= size lt
+                 && size r <= size gt
+                 && submap' f l lt
+                 && submap' f r gt
+
+||| The expression (isSubmapOfBy f t1 t2) returns True if
+||| all keys in t1 are in tree t2, and when f returns True when
+||| applied to their respective values.
+public export
+isSubmapOfBy : Ord k => (a -> b -> Bool) -> Map k a -> Map k b -> Bool
+isSubmapOfBy f t1 t2 = size t1 <= size t2 && submap' f t1 t2
+
+||| This function is defined as (isSubmapOf = isSubmapOfBy (==)).
+public export
+isSubmapOf : Eq v => Ord k => Map k v -> Map k v -> Bool
+isSubmapOf m1 m2 = isSubmapOfBy (==) m1 m2
+
+||| Is this a proper submap? (ie. a submap but not equal).
+||| The expression (isProperSubmapOfBy f m1 m2) returns True when
+||| keys m1 and keys m2 are not equal,
+||| all keys in m1 are in m2, and when f returns True when
+||| applied to their respective values.
+public export
+isProperSubmapOfBy : Ord k => (a -> b -> Bool) -> Map k a -> Map k b -> Bool
+isProperSubmapOfBy f t1 t2 = size t1 < size t2 && submap' f t1 t2
+
+||| Is this a proper submap? (ie. a submap but not equal).
+||| Defined as (isProperSubmapOf = isProperSubmapOfBy (==)).
+public export
+isProperSubmapOf : Eq v => Ord k => Map k v -> Map k v -> Bool
+isProperSubmapOf m1 m2 = isProperSubmapOfBy (==) m1 m2
+
+--------------------------------------------------------------------------------
+--          Indexed
+--------------------------------------------------------------------------------
+
+||| Lookup the index of a key, which is its zero-based index in
+||| the sequence sorted by keys. The index is a number from 0 up to, but not
+||| including, the size of the map. O(log n)
+public export
+lookupIndex : Ord k => k -> Map k v -> Maybe Int
+lookupIndex = go 0
+  where
+    go : Int -> k -> Map k a -> Maybe Int
+    go _  _ Tip               = Nothing
+    go idx k (Bin _ kx _ l r) =
+      case compare k kx of
+        LT =>
+          go idx k l
+        GT =>
+          go (idx + size l + 1) k r
+        EQ =>
+          Just $ idx + size l
+
+||| Return the index of a key, which is its zero-based index in
+||| the sequence sorted by keys. The index is a number from 0 up to, but not
+||| including, the size of the map. Calls idris_crash when the key is not
+||| a member of the map. O(log n)
+public export
+findIndex : Ord k => k -> Map k v -> Int
+findIndex = go 0
+  where
+    go : Int -> k -> Map k a -> Int
+    go _   _ Tip              = assert_total $ idris_crash "Map.findIndex: element is not in the map"
+    go idx k (Bin _ kx _ l r) =
+      case compare k kx of
+        LT =>
+          go idx k l
+        GT =>
+          go (idx + size l + 1) k r
+        EQ =>
+          idx + size l
+
+||| Retrieve an element by its index, i.e. by its zero-based
+||| index in the sequence sorted by keys. If the index is out of range (less
+||| than zero, greater or equal to size of the map), idris_crash is called. O(log n)
+public export
+elemAt : Int -> Map k v -> (k,v)
+elemAt _ Tip              = assert_total $ idris_crash "Map.elemAt: index out of range"
+elemAt i (Bin _ kx x l r) =
+  case compare i (size l) of
+     LT =>
+       elemAt i l
+     GT =>
+       elemAt (i-(size l)-1) r
+     EQ =>
+       (kx,x)
+
+||| Update the element at index, i.e. by its zero-based index in
+||| the sequence sorted by keys. If the index is out of range (less than zero,
+||| greater or equal to size of the map), idris_crash is called. O(log n)
+public export
+updateAt : (k -> v -> Maybe v) -> Int -> Map k v -> Map k v
+updateAt f i t =
+  case t of
+    Tip             => assert_total $ idris_crash "Map.updateAt: index out of range"
+    Bin sx kx x l r =>
+      case compare i (size l) of
+        LT =>
+          balanceR kx x (updateAt f i l) r
+        GT =>
+          balanceL kx x l (updateAt f (i-(size l)-1) r)
+        EQ =>
+          case f kx x of
+            Just x' =>
+              Bin sx kx x' l r
+            Nothing =>
+              glue l r
+
+||| Delete the element at index, i.e. by its zero-based index in
+||| the sequence sorted by keys. If the index is out of range (less than zero,
+||| greater or equal to size of the map), idris_crash is called. O(log n)
+public export
+deleteAt : Int -> Map k v -> Map k v
+deleteAt i t =
+  case t of
+    Tip            => assert_total $ idris_crash "Map.deleteAt: index out of range"
+    Bin _ kx x l r =>
+      case compare i (size l) of
+        LT =>
+          balanceR kx x (deleteAt i l) r
+        GT =>
+          balanceL kx x l (deleteAt (i-(size l)-1) r)
+        EQ =>
+          glue l r
+
+||| Take a given number of entries in key order, beginning
+||| with the smallest keys. O(log n)
+public export
+take : Int -> Map k v -> Map k v
+take i m =
+  case i >= size m of
+    True  =>
+      m
+    False =>
+      go i m
+  where
+    go : Int -> Map k v -> Map k v
+    go _ Tip              = Tip
+    go i (Bin _ kx x l r) =
+      case i <= 0 of
+        True  =>
+          Tip
+        False =>
+          case compare i (size l) of
+            LT =>
+              go i l
+            GT =>
+              link kx x l (go (i - (size l) - 1) r)
+            EQ =>
+              l
+
+||| Drop a given number of entries in key order, beginning
+||| with the smallest keys. O(log n)
+public export
+drop : Int -> Map k v -> Map k v
+drop i m =
+  case i >= size m of
+    True  =>
+      Tip
+    False =>
+      go i m
+  where
+    go : Int -> Map k v -> Map k v
+    go _ Tip              = Tip
+    go i (Bin _ kx x l r) =
+      case i <= 0 of
+        True  =>
+          m
+        False =>
+          case compare i (size l) of
+            LT =>
+              link kx x (go i l) r
+            GT =>
+              go (i - (size l) - 1) r
+            EQ =>
+              insertMin kx x r
+
+||| Split a map at a particular index. O(log n)
+public export
+splitAt : Int -> Map k v -> (Map k v, Map k v)
+splitAt i m =
+  case i >= size m of
+    True  =>
+      (m,Tip)
+    False =>
+      go i m
+  where
+    go : Int -> Map k v -> (Map k v,Map k v)
+    go _ Tip              = (Tip,Tip)
+    go i (Bin _ kx x l r) =
+      case i <= 0 of
+        True  =>
+          (Tip,m)
+        False =>
+          case compare i (size l) of
+            LT =>
+              case go i l of
+                (ll,lr) =>
+                  (ll,link kx x lr r)
+            GT =>
+              case go (i - (size l) - 1) r of
+                (rl,rr) =>
+                  (link kx x l rl,rr)
+            EQ =>
+              (l,insertMin kx x r)
+
+--------------------------------------------------------------------------------
+--          Min/Max
+--------------------------------------------------------------------------------
+
+lookupMinSure : k -> v -> Map k v -> (k,v)
+lookupMinSure k v Tip             = (k,v)
+lookupMinSure _ _ (Bin _ k v l _) = lookupMinSure k v l
+
+||| The minimal key of the map. Returns Nothing if the map is empty. O(log n)
+public export
+lookupMin : Map k v -> Maybe (k,v)
+lookupMin Tip             = Nothing
+lookupMin (Bin _ k v l _) = Just $ lookupMinSure k v l
+
+lookupMaxSure : k -> v -> Map k v -> (k,v)
+lookupMaxSure k v Tip             = (k,v)
+lookupMaxSure _ _ (Bin _ k v _ r) = lookupMaxSure k v r
+
+||| The maximal key of the map. Returns Nothing if the map is empty. O(log n)
+public export
+lookupMax : Map k v -> Maybe (k,v)
+lookupMax Tip             = Nothing
+lookupMax (Bin _ k v _ r) = Just $ lookupMaxSure k v r
+
+||| The minimal key of the map. Calls idris_crash if the map is empty. O(log n)
+public export
+findMin : Map k v -> (k,v)
+findMin t =
+  case lookupMin t of
+    Just r  => r
+    Nothing => assert_total $ idris_crash "Map.findMin: empty map has no minimal element"
+
+||| The maximal key of the map. Calls idris_crash if the map is empty. O(log n)
+public export
+findMax : Map k v -> (k,v)
+findMax t =
+  case lookupMax t of
+    Just r  => r
+    Nothing => assert_total $ idris_crash "Map.findMax: empty map has no maximal element"
+
+||| Delete the minimal key. Returns an empty map if the map is empty. O(log n)
+public export
+deleteMin : Map k v -> Map k v
+deleteMin Tip                 = Tip
+deleteMin (Bin _ _  _ Tip r)  = r
+deleteMin (Bin _ kx x l   r)  = balanceR kx x (deleteMin l) r
+
+||| Delete the maximal key. Returns an empty map if the map is empty. O(log n)
+public export
+deleteMax : Map k v -> Map k v
+deleteMax Tip                 = Tip
+deleteMax (Bin _ _  _ l Tip)  = l
+deleteMax (Bin _ kx x l r)    = balanceL kx x l (deleteMax r)
+
+||| Retrieves the minimal (key,value) pair of the map, and
+||| the map stripped of that element, or Nothing if passed an empty map. O(log n)
+public export
+minViewWithKey : Map k v -> Maybe ((k,v),Map k v)
+minViewWithKey Tip             = Nothing
+minViewWithKey (Bin _ k x l r) =
+  Just $
+    case minViewSure k x l r of
+      MinView' km xm t =>
+        ((km,xm),t)
+
+||| Delete and find the minimal element. O(log n)
+public export
+deleteFindMin : Map k v -> ((k,v),Map k v)
+deleteFindMin t =
+  case minViewWithKey t of
+    Just res => res
+    Nothing  => (assert_total $ idris_crash "Map.deleteFindMin: can not return the minimal element of an empty map",Tip)
+
+||| Retrieves the maximal (key,value) pair of the map, and
+||| the map stripped of that element, or Nothing if passed an empty map. O(log n)
+public export
+maxViewWithKey : Map k v -> Maybe ((k,v),Map k v)
+maxViewWithKey Tip             = Nothing
+maxViewWithKey (Bin _ k x l r) =
+  Just $
+    case maxViewSure k x l r of
+      MaxView' km xm t =>
+        ((km,xm),t)
+
+||| Delete and find the maximal element. O(log n)
+public export
+deleteFindMax : Map k v -> ((k,v),Map k v)
+deleteFindMax t =
+  case maxViewWithKey t of
+    Just res => res
+    Nothing  => (assert_total $ idris_crash "Map.deleteFindMax: can not return the maximal element of an empty map",Tip)
+
+||| Update the value at the minimal key. O(log n)
+public export
+updateMinWithKey : (k -> v -> Maybe v) -> Map k v -> Map k v
+updateMinWithKey _ Tip                 = Tip
+updateMinWithKey f (Bin sx kx x Tip r) =
+  case f kx x of
+    Nothing => r
+    Just x' => Bin sx kx x' Tip r
+updateMinWithKey f (Bin _ kx x l r)    =
+  balanceR kx x (updateMinWithKey f l) r
+
+||| Update the value at the minimal key. O(log n)
+public export
+updateMin : (v -> Maybe v) -> Map k v -> Map k v
+updateMin f m = updateMinWithKey (\_, x => f x) m
+
+||| Update the value at the maximal key. O(log n)
+public export
+updateMaxWithKey : (k -> v -> Maybe v) -> Map k v -> Map k v
+updateMaxWithKey _ Tip                 = Tip
+updateMaxWithKey f (Bin sx kx x l Tip) =
+  case f kx x of
+    Nothing => l
+    Just x' => Bin sx kx x' l Tip
+updateMaxWithKey f (Bin _ kx x l r)    =
+  balanceL kx x l (updateMaxWithKey f r)
+
+||| Update the value at the maximal key. O(log n)
+public export
+updateMax : (v -> Maybe v) -> Map k v -> Map k v
+updateMax f m = updateMaxWithKey (\_, x => f x) m
+
+||| Retrieves the value associated with minimal key of the
+||| map, and the map stripped of that element, or Nothing if passed an empty map. O(log n)
+public export
+minView : Map k v -> Maybe (v,Map k v)
+minView t =
+  case minViewWithKey t of
+    Nothing         => Nothing
+    Just ((_,x),t') => Just (x,t')
+
+||| Retrieves the value associated with maximal key of the
+||| map, and the map stripped of that element, or Nothing if passed an empty map. O(log n)
+public export
+maxView : Map k v -> Maybe (v,Map k v)
+maxView t =
+  case maxViewWithKey t of
+    Nothing         => Nothing
+    Just ((_,x),t') => Just (x,t')
+
 --------------------------------------------------------------------------------
 --          Combine
 --------------------------------------------------------------------------------
 
-union : Ord k => Map k v -> Map k v -> Map k v
-union t1 Tip                 = t1
-union t1 (Bin _ k x Tip Tip) = insert k x t1
-union (Bin _ k x Tip Tip) t2 = insert k x t2
-union Tip t2 = t2
-union t1@(Bin _ k1 x1 l1 r1) t2 = case split k1 t2 of
-  (l2, r2) | l1l2 `ptrEq` l1 && r1r2 `ptrEq` r1 -> t1
-           | otherwise -> link k1 x1 l1l2 r1r2
-           where !l1l2 = union l1 l2
-                 !r1r2 = union r1 r2
--}
+||| The expression (union t1 t2) takes the left-biased union of t1 and t2.
+||| It prefers t1 when duplicate keys are encountered.
+public export
+union : Eq (Map k v) => Eq v => Ord k => Map k v -> Map k v -> Map k v
+union t1                     Tip                 = t1
+union t1                     (Bin _ k x Tip Tip) = insertR k x t1
+union (Bin _ k x Tip Tip)    t2                  = insert k x t2
+union Tip                    t2                  = t2
+union t1@(Bin _ k1 x1 l1 r1) t2                  =
+  case split k1 t2 of
+    (l2,r2) =>
+      case (union l1 l2) == l1 && (union r1 r2) == r1 of
+        True  =>
+          t1
+        False =>
+          link k1 x1 (union l1 l2) (union r1 r2)
+
+||| Union with a combining function.
+public export
+unionWith : Ord k => (v -> v -> v) -> Map k v -> Map k v -> Map k v
+unionWith _ t1                  Tip                 = t1
+unionWith f t1                  (Bin _ k x Tip Tip) = insertWithR f k x t1
+unionWith f (Bin _ k x Tip Tip) t2                  = insertWith f k x t2
+unionWith _ Tip                 t2                  = t2
+unionWith f (Bin _ k1 x1 l1 r1) t2                  =
+  case splitLookup k1 t2 of
+    (l2,mb,r2) =>
+      case mb of
+        Nothing => link k1 x1 (unionWith f l1 l2) (unionWith f r1 r2)
+        Just x2 => link k1 (f x1 x2) (unionWith f l1 l2) (unionWith f r1 r2)
+
+||| Union with a combining function.
+public export
+unionWithKey : Ord k => (k -> v -> v -> v) -> Map k v -> Map k v -> Map k v
+unionWithKey _ t1                  Tip                 = t1
+unionWithKey f t1                  (Bin _ k x Tip Tip) = insertWithKeyR f k x t1
+unionWithKey f (Bin _ k x Tip Tip) t2                  = insertWithKey f k x t2
+unionWithKey _ Tip                 t2                  = t2
+unionWithKey f (Bin _ k1 x1 l1 r1) t2                  =
+  case splitLookup k1 t2 of
+    (l2,mb,r2) =>
+      case mb of
+        Nothing => link k1 x1 (unionWithKey f l1 l2) (unionWithKey f r1 r2)
+        Just x2 => link k1 (f k1 x1 x2) (unionWithKey f l1 l2) (unionWithKey f r1 r2)
+
+||| The union of a list of maps. 
+public export
+unions : Eq (Map k v) => Eq v => Foldable f => Ord k => f (Map k v) -> Map k v
+unions ts = foldl union empty ts
+
+||| The union of a list of maps, with a combining operation.
+public export
+unionsWith : Foldable f => Ord k => (v -> v -> v) -> f (Map k v) -> Map k v
+unionsWith f ts = foldl (unionWith f) empty ts
 
 --------------------------------------------------------------------------------
---          Folds
+--          Difference
 --------------------------------------------------------------------------------
 
+||| Difference of two maps.
+||| Return elements of the first map not existing in the second map.
 public export
-foldl : (v -> w -> v) -> v -> Map k w -> v
-foldl f z Tip             = z
-foldl f z (Bin _ _ x l r) = foldl f (f (foldl f z l) x) r
+difference : Ord k => Map k a -> Map k b -> Map k a
+difference Tip _                = Tip
+difference t1 Tip               = t1
+difference t1 (Bin _ k _ l2 r2) =
+  case split k t1 of
+    (l1,r1) =>
+      case size (difference l1 l2) + size (difference r1 r2) == size t1 of
+        True  =>
+          t1
+        False =>
+          link2 (difference l1 l2) (difference r1 r2)
 
+||| Same as difference.
 public export
-foldr : (v -> w -> w) -> w -> Map k v -> w
-foldr f z Tip             = z 
-foldr f z (Bin _ _ x l r) = foldr f (f x (foldr f z r)) l
+(\\) : Ord k => Map k a -> Map k b -> Map k a
+m1 \\ m2 = difference m1 m2
 
-public export
-foldlWithKey : (v -> k -> w -> v) -> v -> Map k w -> v
-foldlWithKey f z Tip              = z
-foldlWithKey f z (Bin _ kx x l r) = foldlWithKey f (f (foldlWithKey f z l) kx x) r
+--------------------------------------------------------------------------------
+--          Intersection
+--------------------------------------------------------------------------------
 
+||| Intersection of two maps.
+||| Return data in the first map for the keys existing in both maps.
 public export
-foldrWithKey : (k -> v -> w -> w) -> w -> Map k v -> w
-foldrWithKey f z Tip              = z
-foldrWithKey f z (Bin _ kx x l r) = foldrWithKey f (f kx x (foldrWithKey f z r)) l
+intersection : Eq (Map k a) => Ord k => Map k a -> Map k b -> Map k a
+intersection Tip                  _   = Tip
+intersection _                    Tip = Tip
+intersection t1@(Bin _ k x l1 r1) t2  =
+  case splitMember k t2 of
+    (l2,True,r2) =>
+      case (intersection l1 l2) == l1 && (intersection r1 r2) == r1 of
+        True  =>
+          t1
+        False =>
+          link k x (intersection l1 l2) (intersection r1 r2)
+    (l2,False,r2) =>
+      link2 (intersection l1 l2) (intersection r1 r2)
+
+||| Intersection with a combining function.
+public export
+intersectionWith : Ord k => (a -> b -> c) -> Map k a -> Map k b -> Map k c
+intersectionWith f Tip                _   = Tip
+intersectionWith f _                  Tip = Tip
+intersectionWith f (Bin _ k x1 l1 r1) t2  = 
+  case splitLookup k t2 of
+    (l2,Just x2,r2) =>
+      link k (f x1 x2) (intersectionWith f l1 l2) (intersectionWith f r1 r2)
+    (l2,Nothing,r2) =>
+      link2 (intersectionWith f l1 l2) (intersectionWith f r1 r2)
+
+||| Intersection with a combining function.
+public export
+intersectionWithKey : Ord k => (k -> a -> b -> c) -> Map k a -> Map k b -> Map k c
+intersectionWithKey f Tip                _   = Tip
+intersectionWithKey f _                  Tip = Tip
+intersectionWithKey f (Bin _ k x1 l1 r1) t2  =
+  case splitLookup k t2 of
+    (l2,Just x2,r2) =>
+      link k (f k x1 x2) (intersectionWithKey f l1 l2) (intersectionWithKey f r1 r2)
+    (l2,Nothing,r2) =>
+      link2 (intersectionWithKey f l1 l2) (intersectionWithKey f r1 r2)
+
+--------------------------------------------------------------------------------
+--          Disjoint
+--------------------------------------------------------------------------------
+
+||| Check whether the key sets of two
+||| maps are disjoint (i.e., their intersection is empty).
+public export
+disjoint : Ord k => Map k a -> Map k b -> Bool
+disjoint Tip             _   = True
+disjoint _               Tip = True
+disjoint (Bin 1 k _ _ _) t   = k `notMember` t
+disjoint (Bin _ k _ l r) t   =
+  let (lt,found,gt) = splitMember k t
+    in not found && disjoint l lt && disjoint r gt
+
+--------------------------------------------------------------------------------
+--          Compose
+--------------------------------------------------------------------------------
+
+||| Relate the keys of one map to the values of
+||| the other, by using the values of the former as keys for lookups in the latter.
+||| O(n * log(m)), where m is the size of the first argument.
+public export
+compose : Ord b => Map b c -> Map a b -> Map a c
+compose bc ab = 
+  case null bc of
+    True  =>
+      empty
+    False =>
+      mapMaybe ((!?) bc) ab
 
 --------------------------------------------------------------------------------
 --          Traversal
 --------------------------------------------------------------------------------
 
+||| Map a function over all values in the map. O(n)
 public export
 map : (v -> w) -> Map k v -> Map k w
 map _ Tip               = Tip
 map f (Bin sx kx x l r) = Bin sx kx (f x) (map f l) (map f r)
 
+||| Map a function over all values in the map. O(n)
 public export
 mapWithKey : (k -> v -> w) -> Map k v -> Map k w
 mapWithKey _ Tip               = Tip
 mapWithKey f (Bin sx kx x l r) = Bin sx kx (f kx x) (mapWithKey f l) (mapWithKey f r)
 
+||| The function mapAccumL threads an accumulating
+||| argument through the map in ascending order of keys. O(n)
 public export
 mapAccumL : (v -> k -> w -> (v,c)) -> v -> Map k w -> (v,Map k c)
 mapAccumL _ a Tip               = (a,Tip)
@@ -600,6 +1224,8 @@ mapAccumL f a (Bin sx kx x l r) =
       (a3,r') = mapAccumL f a2 r
   in (a3,Bin sx kx x' l' r')
 
+||| The function mapAccumRWithKey threads an accumulating
+||| argument through the map in descending order of keys. O(n)
 public export
 mapAccumRWithKey : (v -> k -> w -> (v,c)) -> v -> Map k w -> (v,Map k c)
 mapAccumRWithKey _ a Tip               = (a,Tip)
@@ -609,27 +1235,29 @@ mapAccumRWithKey f a (Bin sx kx x l r) =
       (a3,l') = mapAccumRWithKey f a2 l
   in (a3,Bin sx kx x' l' r')
 
+||| The function mapAccumWithKey threads an accumulating
+||| argument through the map in ascending order of keys. O(n)
 public export
 mapAccumWithKey : (v -> k -> w -> (v,c)) -> v -> Map k w -> (v,Map k c)
 mapAccumWithKey f a t = mapAccumL f a t
 
+||| The function mapAccum threads an accumulating
+||| argument through the map in ascending order of keys. O(n)
 public export
 mapAccum : (v -> w -> (v,c)) -> v -> Map k w -> (v,Map k c)
 mapAccum f a m = mapAccumWithKey (\a', _, x' => f a' x') a m
 
 --------------------------------------------------------------------------------
---          Compose
---------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
 --          Lists
 --------------------------------------------------------------------------------
 
+||| Convert the map to a list of key/value pairs where the keys are in descending order. O(n)
 public export
 toDescList : Map k v -> List (k,v)
 toDescList Tip               = []
 toDescList t@(Bin _ _ _ _ _) = foldlWithKey (\xs, k, x => (k,x) :: xs) [] t
 
+||| Convert the map to a list of key/value pairs where the keys are in ascending order. O(n)
 public export
 toAscList : Map k v -> List (k,v)
 toAscList Tip               = []
