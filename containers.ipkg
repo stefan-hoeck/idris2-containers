@@ -7,5 +7,7 @@ sourcedir  = "src"
 depends    = base         >= 0.6.0
            , elab-util
 
-modules = Data.Queue
+modules = Data.Map
+        , Data.Map.Internal
+        , Data.Queue
         , Data.Tree
