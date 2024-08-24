@@ -31,7 +31,7 @@ foldl f z (Bin _ _ x l r) = foldl f (f (foldl f z l) x) r
 ||| Fold the values in the map using the given right-associative binary operator. O(n)
 public export
 foldr : (v -> w -> w) -> w -> Map k v -> w
-foldr f z Tip             = z 
+foldr f z Tip             = z
 foldr f z (Bin _ _ x l r) = foldr f (f x (foldr f z r)) l
 
 ||| Fold the keys and values in the map using the given left-associative binary operator. O(n)
@@ -414,7 +414,7 @@ lookupGT = goNothing
     goJust _ kx' x' Tip              = Just (kx',x')
     goJust k kx' x' (Bin _ kx x l r) =
       case k < kx of
-        True  => goJust k kx x l 
+        True  => goJust k kx x l
         False => goJust k kx' x' r
     goNothing : k -> Map k v -> Maybe (k,v)
     goNothing _ Tip              = Nothing
@@ -729,10 +729,10 @@ isProperSubmapOf m1 m2 = isProperSubmapOfBy (==) m1 m2
 ||| the sequence sorted by keys. The index is a number from 0 up to, but not
 ||| including, the size of the map. O(log n)
 public export
-lookupIndex : Ord k => k -> Map k v -> Maybe Int
+lookupIndex : Ord k => k -> Map k v -> Maybe Nat
 lookupIndex = go 0
   where
-    go : Int -> k -> Map k a -> Maybe Int
+    go : Nat -> k -> Map k a -> Maybe Nat
     go _  _ Tip               = Nothing
     go idx k (Bin _ kx _ l r) =
       case compare k kx of
@@ -748,10 +748,10 @@ lookupIndex = go 0
 ||| including, the size of the map. Calls idris_crash when the key is not
 ||| a member of the map. O(log n)
 public export
-findIndex : Ord k => k -> Map k v -> Int
+findIndex : Ord k => k -> Map k v -> Nat
 findIndex = go 0
   where
-    go : Int -> k -> Map k a -> Int
+    go : Nat -> k -> Map k a -> Nat
     go _   _ Tip              = assert_total $ idris_crash "Map.findIndex: element is not in the map"
     go idx k (Bin _ kx _ l r) =
       case compare k kx of
@@ -766,14 +766,14 @@ findIndex = go 0
 ||| index in the sequence sorted by keys. If the index is out of range (less
 ||| than zero, greater or equal to size of the map), idris_crash is called. O(log n)
 public export
-elemAt : Int -> Map k v -> (k,v)
+elemAt : Nat -> Map k v -> (k,v)
 elemAt _ Tip              = assert_total $ idris_crash "Map.elemAt: index out of range"
 elemAt i (Bin _ kx x l r) =
   case compare i (size l) of
      LT =>
        elemAt i l
      GT =>
-       elemAt (i-(size l)-1) r
+       elemAt ((i `minus` (size l)) `minus` 1) r
      EQ =>
        (kx,x)
 
@@ -781,7 +781,7 @@ elemAt i (Bin _ kx x l r) =
 ||| the sequence sorted by keys. If the index is out of range (less than zero,
 ||| greater or equal to size of the map), idris_crash is called. O(log n)
 public export
-updateAt : (k -> v -> Maybe v) -> Int -> Map k v -> Map k v
+updateAt : (k -> v -> Maybe v) -> Nat -> Map k v -> Map k v
 updateAt f i t =
   case t of
     Tip             => assert_total $ idris_crash "Map.updateAt: index out of range"
@@ -790,7 +790,7 @@ updateAt f i t =
         LT =>
           balanceR kx x (updateAt f i l) r
         GT =>
-          balanceL kx x l (updateAt f (i-(size l)-1) r)
+          balanceL kx x l (updateAt f ((i `minus` (size l)) `minus` 1) r)
         EQ =>
           case f kx x of
             Just x' =>
@@ -802,7 +802,7 @@ updateAt f i t =
 ||| the sequence sorted by keys. If the index is out of range (less than zero,
 ||| greater or equal to size of the map), idris_crash is called. O(log n)
 public export
-deleteAt : Int -> Map k v -> Map k v
+deleteAt : Nat -> Map k v -> Map k v
 deleteAt i t =
   case t of
     Tip            => assert_total $ idris_crash "Map.deleteAt: index out of range"
@@ -811,14 +811,14 @@ deleteAt i t =
         LT =>
           balanceR kx x (deleteAt i l) r
         GT =>
-          balanceL kx x l (deleteAt (i-(size l)-1) r)
+          balanceL kx x l (deleteAt ((i `minus` (size l)) `minus` 1) r)
         EQ =>
           glue l r
 
 ||| Take a given number of entries in key order, beginning
 ||| with the smallest keys. O(log n)
 public export
-take : Int -> Map k v -> Map k v
+take : Nat -> Map k v -> Map k v
 take i m =
   case i >= size m of
     True  =>
@@ -826,7 +826,7 @@ take i m =
     False =>
       go i m
   where
-    go : Int -> Map k v -> Map k v
+    go : Nat -> Map k v -> Map k v
     go _ Tip              = Tip
     go i (Bin _ kx x l r) =
       case i <= 0 of
@@ -837,14 +837,14 @@ take i m =
             LT =>
               go i l
             GT =>
-              link kx x l (go (i - (size l) - 1) r)
+              link kx x l (go ((i `minus` (size l)) `minus` 1) r)
             EQ =>
               l
 
 ||| Drop a given number of entries in key order, beginning
 ||| with the smallest keys. O(log n)
 public export
-drop : Int -> Map k v -> Map k v
+drop : Nat -> Map k v -> Map k v
 drop i m =
   case i >= size m of
     True  =>
@@ -852,7 +852,7 @@ drop i m =
     False =>
       go i m
   where
-    go : Int -> Map k v -> Map k v
+    go : Nat -> Map k v -> Map k v
     go _ Tip              = Tip
     go i (Bin _ kx x l r) =
       case i <= 0 of
@@ -863,13 +863,13 @@ drop i m =
             LT =>
               link kx x (go i l) r
             GT =>
-              go (i - (size l) - 1) r
+              go ((i `minus` (size l)) `minus` 1) r
             EQ =>
               insertMin kx x r
 
 ||| Split a map at a particular index. O(log n)
 public export
-splitAt : Int -> Map k v -> (Map k v, Map k v)
+splitAt : Nat -> Map k v -> (Map k v, Map k v)
 splitAt i m =
   case i >= size m of
     True  =>
@@ -877,7 +877,7 @@ splitAt i m =
     False =>
       go i m
   where
-    go : Int -> Map k v -> (Map k v,Map k v)
+    go : Nat -> Map k v -> (Map k v,Map k v)
     go _ Tip              = (Tip,Tip)
     go i (Bin _ kx x l r) =
       case i <= 0 of
@@ -890,7 +890,7 @@ splitAt i m =
                 (ll,lr) =>
                   (ll,link kx x lr r)
             GT =>
-              case go (i - (size l) - 1) r of
+              case go ((i `minus` (size l)) `minus` 1) r of
                 (rl,rr) =>
                   (link kx x l rl,rr)
             EQ =>
@@ -1087,7 +1087,7 @@ unionWithKey f (Bin _ k1 x1 l1 r1) t2                  =
         Nothing => link k1 x1 (unionWithKey f l1 l2) (unionWithKey f r1 r2)
         Just x2 => link k1 (f k1 x1 x2) (unionWithKey f l1 l2) (unionWithKey f r1 r2)
 
-||| The union of a list of maps. 
+||| The union of a list of maps.
 public export
 unions : Eq (Map k v) => Eq v => Foldable f => Ord k => f (Map k v) -> Map k v
 unions ts = foldl union empty ts
@@ -1147,7 +1147,7 @@ public export
 intersectionWith : Ord k => (a -> b -> c) -> Map k a -> Map k b -> Map k c
 intersectionWith f Tip                _   = Tip
 intersectionWith f _                  Tip = Tip
-intersectionWith f (Bin _ k x1 l1 r1) t2  = 
+intersectionWith f (Bin _ k x1 l1 r1) t2  =
   case splitLookup k t2 of
     (l2,Just x2,r2) =>
       link k (f x1 x2) (intersectionWith f l1 l2) (intersectionWith f r1 r2)
@@ -1190,7 +1190,7 @@ disjoint (Bin _ k _ l r) t   =
 ||| O(n * log(m)), where m is the size of the first argument.
 public export
 compose : Ord b => Map b c -> Map a b -> Map a c
-compose bc ab = 
+compose bc ab =
   case null bc of
     True  =>
       empty
@@ -1297,6 +1297,6 @@ Functor (Map k) where
 
 public export
 Foldable (Map k) where
-  foldl f z = foldl f z . values 
-  foldr f z = foldr f z . values 
+  foldl f z = foldl f z . values
+  foldr f z = foldr f z . values
   null      = null

@@ -14,7 +14,7 @@ import Derive.Prelude
 
 public export
 Size : Type
-Size = Int
+Size = Nat
 
 ||| A finite map from keys k to values v.
 public export
@@ -48,9 +48,10 @@ singleton k x = Bin 1 k x Tip Tip
 
 ||| The number of elements in the map. O(1)
 public export
-size : Map k v -> Int
-size Tip              = 0
-size (Bin sz _ _ _ _) = sz
+size : Map k v -> Nat
+size Tip                 = 0
+size (Bin Z     _ _ _ _) = 0
+size (Bin (S n) _ _ _ _) = n
 
 --------------------------------------------------------------------------------
 --          Map Internals
@@ -89,10 +90,10 @@ size (Bin sz _ _ _ _) = sz
   is larger, we currently use delta=3.
 -}
 
-delta : Int
+delta : Nat
 delta = 3
 
-ratio : Int
+ratio : Nat
 ratio = 2
 
 ||| The bin constructor maintains the size of the tree.
