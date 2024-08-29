@@ -1,12 +1,13 @@
 ||| Finite Maps
 module Data.Map
 
-import Data.Map.Internal
+import public Data.Map.Internal
 
 import Data.Bits
 import Data.List
 
 %hide Prelude.null
+%hide Prelude.toList
 
 %default total
 
@@ -1360,3 +1361,7 @@ Foldable (Map k) where
   foldl f z = foldl f z . values
   foldr f z = foldr f z . values
   null      = null
+
+public export
+Show k => Show v => Show (Map k v) where
+  show = show . toList
