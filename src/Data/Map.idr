@@ -3,6 +3,7 @@ module Data.Map
 
 import Data.Map.Internal
 
+import Data.Bits
 import Data.List
 
 %hide Prelude.null
@@ -1250,6 +1251,65 @@ mapAccum f a m = mapAccumWithKey (\a', _, x' => f a' x') a m
 --------------------------------------------------------------------------------
 --          Lists
 --------------------------------------------------------------------------------
+
+||| Build a map from a list of key/value pairs. See also fromAscList.
+||| If the list contains more than one value for the same key, the last value
+||| for the key is retained.
+||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
+public export
+partial
+fromList : Eq (Map k v) => Eq v => Ord k => List (k,v) -> Map k v
+fromList []                 = Tip
+fromList [(kx, x)]          = Bin 1 kx x Tip Tip
+fromList ((kx0, x0) :: xs0) =
+  case not_ordered kx0 xs0 of
+    True  =>
+      fromList' (Bin 1 kx0 x0 Tip Tip) xs0
+    False =>
+      go 1 (Bin 1 kx0 x0 Tip Tip) xs0
+  where
+    not_ordered : k -> List (k,v) -> Bool
+    not_ordered _  []            = False
+    not_ordered kx ((ky,_) :: _) = kx >= ky
+    fromList' : Map k v -> List (k,v) -> Map k v
+    fromList' t0 xs = foldl ins t0 xs
+      where
+         ins : Map k v -> (k,v) -> Map k v
+         ins t (k,x) = insert k x t
+    create : Nat -> List (k,v) -> (Map k v,List (k,v),List (k,v))
+    create _     []                  = (Tip, [], [])
+    create Z     _                   = (Tip, [], [])
+    create (S k) xs@((kx, x) :: xss) =
+      case k == 1 of
+        True  =>
+          case not_ordered kx xss of
+            True  =>
+              (Bin 1 kx x Tip Tip, [], xss)
+            False =>
+              (Bin 1 kx x Tip Tip, xss, [])
+        False =>
+          case create (the Nat (cast (the Int (cast k) `shiftR` 1))) xs of
+            res@(_, [], _)              => res
+            (l, [(ky, y)], zs)          => (insertMax ky y l, [], zs)
+            (l, ys@((ky, y) :: yss), _) =>
+              case not_ordered ky yss of
+                True  =>
+                  (l, [], ys)
+                False =>
+                  let (r, zs, ws) = create (the Nat (cast (the Int (cast k) `shiftR` 1))) yss 
+                  in (link ky y l r, zs, ws)
+    go : Nat -> Map k v -> List (k,v) -> Map k v 
+    go _     t []                  = t
+    go Z     t _                   = t
+    go _     t [(kx, x)]           = insertMax kx x t
+    go (S k) l xs@((kx, x) :: xss) =
+      case not_ordered kx xss of
+        True  =>
+          fromList' l xs
+        False =>
+          case create k xss of
+            (r, ys, []) => go (the Nat (cast (the Int (cast k) `shiftL` 1))) (link kx x l r) ys
+            (r, _,  ys) => fromList' (link kx x l r) ys
 
 ||| Convert the map to a list of key/value pairs where the keys are in descending order. O(n)
 public export
