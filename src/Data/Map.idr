@@ -1258,7 +1258,7 @@ mapAccum f a m = mapAccumWithKey (\a', _, x' => f a' x') a m
 ||| for the key is retained.
 ||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
 public export
-partial
+total
 fromList : Eq (Map k v) => Eq v => Ord k => List (k,v) -> Map k v
 fromList []                 = Tip
 fromList [(kx, x)]          = Bin 1 kx x Tip Tip
@@ -1289,7 +1289,7 @@ fromList ((kx0, x0) :: xs0) =
             False =>
               (Bin 1 kx x Tip Tip, xss, [])
         False =>
-          case create (the Nat (cast (the Int (cast k) `shiftR` 1))) xs of
+          case assert_total (create (the Nat (cast (the Int (cast k) `shiftR` 1))) xs) of
             res@(_, [], _)              => res
             (l, [(ky, y)], zs)          => (insertMax ky y l, [], zs)
             (l, ys@((ky, y) :: yss), _) =>
@@ -1297,7 +1297,7 @@ fromList ((kx0, x0) :: xs0) =
                 True  =>
                   (l, [], ys)
                 False =>
-                  let (r, zs, ws) = create (the Nat (cast (the Int (cast k) `shiftR` 1))) yss 
+                  let (r, zs, ws) = assert_total (create (the Nat (cast (the Int (cast k) `shiftR` 1))) yss)
                   in (link ky y l r, zs, ws)
     go : Nat -> Map k v -> List (k,v) -> Map k v 
     go _     t []                  = t
@@ -1308,8 +1308,8 @@ fromList ((kx0, x0) :: xs0) =
         True  =>
           fromList' l xs
         False =>
-          case create k xss of
-            (r, ys, []) => go (the Nat (cast (the Int (cast k) `shiftL` 1))) (link kx x l r) ys
+          case assert_total (create k xss) of
+            (r, ys, []) => assert_total (go (the Nat (cast (the Int (cast k) `shiftL` 1))) (link kx x l r) ys)
             (r, _,  ys) => fromList' (link kx x l r) ys
 
 ||| Convert the map to a list of key/value pairs where the keys are in descending order. O(n)
