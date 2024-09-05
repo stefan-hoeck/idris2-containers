@@ -1361,7 +1361,3 @@ Foldable (Map k) where
   foldl f z = foldl f z . values
   foldr f z = foldr f z . values
   null      = null
-
-public export
-Show k => Show v => Show (Map k v) where
-  show = show . toList

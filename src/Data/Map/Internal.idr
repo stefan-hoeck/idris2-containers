@@ -5,8 +5,8 @@ import Data.List
 import Data.String
 import Derive.Prelude
 
-%language ElabReflection
 %default total
+%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          Maps
