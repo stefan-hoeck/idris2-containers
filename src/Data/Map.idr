@@ -17,7 +17,7 @@ import Data.List
 
 ||| The empty map. (O)1
 export
-empty : Map k a
+empty : Map k v
 empty = Tip
 
 --------------------------------------------------------------------------------
@@ -1253,65 +1253,6 @@ mapAccum f a m = mapAccumWithKey (\a', _, x' => f a' x') a m
 --          Lists
 --------------------------------------------------------------------------------
 
-||| Build a map from a list of key/value pairs. See also fromAscList.
-||| If the list contains more than one value for the same key, the last value
-||| for the key is retained.
-||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
-export
-total
-fromList : Eq (Map k v) => Eq v => Ord k => List (k,v) -> Map k v
-fromList []                 = Tip
-fromList [(kx, x)]          = Bin 1 kx x Tip Tip
-fromList ((kx0, x0) :: xs0) =
-  case not_ordered kx0 xs0 of
-    True  =>
-      fromList' (Bin 1 kx0 x0 Tip Tip) xs0
-    False =>
-      go 1 (Bin 1 kx0 x0 Tip Tip) xs0
-  where
-    not_ordered : k -> List (k,v) -> Bool
-    not_ordered _  []            = False
-    not_ordered kx ((ky,_) :: _) = kx >= ky
-    fromList' : Map k v -> List (k,v) -> Map k v
-    fromList' t0 xs = foldl ins t0 xs
-      where
-         ins : Map k v -> (k,v) -> Map k v
-         ins t (k,x) = insert k x t
-    create : Nat -> List (k,v) -> (Map k v,List (k,v),List (k,v))
-    create _     []                  = (Tip, [], [])
-    create Z     _                   = (Tip, [], [])
-    create (S k) xs@((kx, x) :: xss) =
-      case k == 1 of
-        True  =>
-          case not_ordered kx xss of
-            True  =>
-              (Bin 1 kx x Tip Tip, [], xss)
-            False =>
-              (Bin 1 kx x Tip Tip, xss, [])
-        False =>
-          case assert_total (create (the Nat (cast (the Int (cast k) `shiftR` 1))) xs) of
-            res@(_, [], _)              => res
-            (l, [(ky, y)], zs)          => (insertMax ky y l, [], zs)
-            (l, ys@((ky, y) :: yss), _) =>
-              case not_ordered ky yss of
-                True  =>
-                  (l, [], ys)
-                False =>
-                  let (r, zs, ws) = assert_total (create (the Nat (cast (the Int (cast k) `shiftR` 1))) yss)
-                  in (link ky y l r, zs, ws)
-    go : Nat -> Map k v -> List (k,v) -> Map k v 
-    go _     t []                  = t
-    go Z     t _                   = t
-    go _     t [(kx, x)]           = insertMax kx x t
-    go (S k) l xs@((kx, x) :: xss) =
-      case not_ordered kx xss of
-        True  =>
-          fromList' l xs
-        False =>
-          case assert_total (create k xss) of
-            (r, ys, []) => assert_total (go (the Nat (cast (the Int (cast k) `shiftL` 1))) (link kx x l r) ys)
-            (r, _,  ys) => fromList' (link kx x l r) ys
-
 ||| Convert the map to a list of key/value pairs where the keys are in descending order. O(n)
 export
 toDescList : Map k v -> List (k,v)
@@ -1328,6 +1269,72 @@ toAscList t@(Bin _ _ _ _ _) = foldrWithKey (\k, x, xs => (k,x) :: xs) [] t
 export
 toList : Map k v -> List (k,v)
 toList = toAscList
+
+||| Build a map from a list of key/value pairs. See also fromAscList.
+||| If the list contains more than one value for the same key, the last value
+||| for the key is retained.
+||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
+export
+total
+fromList : Eq (Map k v) => Ord k => Eq v => List (k, v) -> Map k v
+fromList [] = Tip
+fromList [(kx, x)] = Bin 1 kx x Tip Tip
+fromList ((kx0, x0) :: xs0) =
+  if not_ordered kx0 xs0 then
+    fromList' (Bin 1 kx0 x0 Tip Tip) xs0
+  else
+    go (Bin 1 kx0 x0 Tip Tip) xs0
+  where
+    -- Helper function to calculate the size of a tree
+    sizeTree : Map k v -> Nat
+    sizeTree Tip = 0
+    sizeTree (Bin sz _ _ _ _) = sz
+    -- Rotate the tree to the right to balance
+    rotateRight : Map k v -> Map k v
+    rotateRight (Bin _ kx x (Bin _ kl xl lll llr) right) =
+      Bin (sizeTree lll + sizeTree llr + sizeTree right + 2) kl xl lll (Bin (sizeTree llr + sizeTree right + 1) kx x llr right)
+    rotateRight t = t
+    -- Rotate the tree to the left to balance
+    rotateLeft : Map k v -> Map k v
+    rotateLeft (Bin _ kx x left (Bin _ kr xr rll rlr)) =
+      Bin (sizeTree left + sizeTree rll + sizeTree rlr + 2) kr xr (Bin (sizeTree left + sizeTree rll + 1) kx x left rll) rlr
+    rotateLeft t = t
+    -- Balance the tree based on its size
+    balanceTree : Map k v -> Map k v
+    balanceTree Tip = Tip
+    balanceTree t@(Bin sz k v left right) =
+      let diff = minus (sizeTree left) (sizeTree right) in
+      if diff > 1 then
+        rotateRight t
+      else if diff < -1 then
+        rotateLeft t
+      else
+        t
+    -- Check if the keys are not ordered
+    not_ordered : k -> List (k,v) -> Bool
+    not_ordered _ [] = False
+    not_ordered kx ((ky, _) :: _) = kx >= ky
+    -- Insert elements into the map using 'insert', avoiding sequential insertions
+    fromList' : Map k v -> List (k, v) -> Map k v
+    fromList' t0 xs = foldl (\t, (k, x) => balanceTree (insert k x t)) t0 xs
+    -- Create function with rebalancing to prevent skewed trees
+    create : Map k v -> List (k, v) -> Map k v
+    create acc [] = acc
+    create acc ((kx, x) :: xs) =
+      if not_ordered kx xs then
+        fromList' (insert kx x acc) xs
+      else
+        create (balanceTree (insert kx x acc)) xs
+    -- Recursive function using structural recursion on the input list
+    go : Map k v -> List (k,v) -> Map k v
+    go acc [] = acc
+    go acc [(kx, x)] = insertMax kx x acc
+    go acc ((kx, x) :: xs) =
+      if not_ordered kx xs then
+        fromList' acc ((kx, x) :: xs)
+      else
+        let newAcc = balanceTree (insert kx x acc) in
+        go newAcc xs
 
 --------------------------------------------------------------------------------
 --          Keys

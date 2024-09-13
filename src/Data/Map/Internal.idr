@@ -38,7 +38,7 @@ data MaxView k a = MaxView' k a (Map k a)
 --------------------------------------------------------------------------------
 
 ||| Wrap a single value in a map
-public export
+export
 singleton : k -> a -> Map k a
 singleton k x = Bin 1 k x Tip Tip
 
@@ -47,11 +47,17 @@ singleton k x = Bin 1 k x Tip Tip
 --------------------------------------------------------------------------------
 
 ||| The number of elements in the map. O(1)
-public export
+export
 size : Map k v -> Nat
-size Tip                 = 0
-size (Bin Z     _ _ _ _) = 0
-size (Bin (S n) _ _ _ _) = n
+size Tip             = 0
+size (Bin _ _ _ l r) = 1 + size l + size r
+{-
+export
+size : Map k v -> Nat
+size Tip                  = 0
+size (Bin Z     _  _ _ _) = 0
+size (Bin (S n) kx x l r) = n + 1
+-}
 
 --------------------------------------------------------------------------------
 --          Map Internals
@@ -101,7 +107,7 @@ bin : k -> v -> Map k v -> Map k v -> Map k v
 bin k x l r = Bin (size l + size r + 1) k x l r
 
 ||| Balances a map after the addition, deletion, or updating of a map via a new key and value.
-public export
+export
 balance : k -> v -> Map k v -> Map k v -> Map k v
 balance k x l r =
   case l of
@@ -167,7 +173,7 @@ balance k x l r =
 ||| A specialized version of balance.
 ||| balanceL is called when left subtree might have been inserted to or when
 ||| right subtree might have been deleted from.
-public export
+export
 balanceL : k -> v -> Map k v -> Map k v -> Map k v
 balanceL k x l r =
   case r of
@@ -209,7 +215,7 @@ balanceL k x l r =
 ||| A specialized version of balance.
 ||| balanceR is called when right subtree might have been inserted to or when
 ||| left subtree might have been deleted from.
-public export
+export
 balanceR : k -> v -> Map k v -> Map k v -> Map k v
 balanceR k x l r =
   case l of
@@ -248,7 +254,7 @@ balanceR k x l r =
             False =>
               Bin (1+ls+rs) k x l r
 
-public export
+export
 insertMax : k -> v -> Map k v -> Map k v
 insertMax kx x t =
   case t of
@@ -257,7 +263,7 @@ insertMax kx x t =
     Bin _ ky y l r =>
       balanceR ky y l (insertMax kx x r)
 
-public export
+export
 insertMin : k -> v -> Map k v -> Map k v
 insertMin kx x t =
   case t of
@@ -266,14 +272,14 @@ insertMin kx x t =
     Bin _ ky y l r =>
       balanceL ky y (insertMin kx x l) r
 
-public export
+export
 minViewSure : k -> v -> Map k v -> Map k v -> MinView k v
 minViewSure k x Tip                 r = MinView' k x r
 minViewSure k x (Bin _ kl xl ll lr) r =
   case minViewSure kl xl ll lr of
     MinView' km xm l' => MinView' km xm (balanceR k x l' r)
 
-public export
+export
 maxViewSure : k -> v -> Map k v -> Map k v -> MaxView k v
 maxViewSure k x l Tip                 = MaxView' k x l
 maxViewSure k x l (Bin _ kr xr rl rr) =
@@ -281,7 +287,7 @@ maxViewSure k x l (Bin _ kr xr rl rr) =
     MaxView' km xm r' => MaxView' km xm (balanceL k x l r')
 
 ||| Glues two maps together (assumes that both maps are already balanced with respect to each other).
-public export
+export
 glue : Map k v -> Map k v -> Map k v
 glue Tip                    r                      = r
 glue l                      Tip                    = l
@@ -295,7 +301,7 @@ glue l@(Bin sl kl xl ll lr) r@(Bin sr kr xr rl rr) =
         in balanceL km m l r'
 
 ||| Utility function that maintains the balance properties of the tree.
-public export
+export
 link2 : Map k v -> Map k v -> Map k v
 link2 Tip                      r                        = r
 link2 l                        Tip                      = l
@@ -311,7 +317,7 @@ link2 l@(Bin sizeL kx x lx rx) r@(Bin sizeR ky y ly ry) =
           glue l r
 
 ||| Utility function that maintains the balance properties of the tree.
-public export
+export
 link : k -> v -> Map k v -> Map k v -> Map k v
 link kx x Tip                      r                        = insertMin kx x r
 link kx x l                        Tip                      = insertMax kx x l
