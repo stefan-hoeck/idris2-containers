@@ -50,14 +50,7 @@ singleton k x = Bin 1 k x Tip Tip
 export
 size : Map k v -> Nat
 size Tip             = 0
-size (Bin _ _ _ l r) = 1 + size l + size r
-{-
-export
-size : Map k v -> Nat
-size Tip                  = 0
-size (Bin Z     _  _ _ _) = 0
-size (Bin (S n) kx x l r) = n + 1
--}
+size (Bin _ _ _ l r) = 1 + size l + size r 
 
 --------------------------------------------------------------------------------
 --          Map Internals
