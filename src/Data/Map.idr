@@ -1275,66 +1275,79 @@ toList = toAscList
 ||| for the key is retained.
 ||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
 export
-total
 fromList : Eq (Map k v) => Ord k => Eq v => List (k, v) -> Map k v
-fromList [] = Tip
-fromList [(kx, x)] = Bin 1 kx x Tip Tip
+fromList []                 = Tip
+fromList [(kx, x)]          = Bin 1 kx x Tip Tip
 fromList ((kx0, x0) :: xs0) =
-  if not_ordered kx0 xs0 then
-    fromList' (Bin 1 kx0 x0 Tip Tip) xs0
-  else
-    go (Bin 1 kx0 x0 Tip Tip) xs0
+  case not_ordered kx0 xs0 of
+    True  =>
+      fromList' (Bin 1 kx0 x0 Tip Tip) xs0
+    False =>
+      go (Bin 1 kx0 x0 Tip Tip) xs0
   where
     -- Helper function to calculate the size of a tree
     sizeTree : Map k v -> Nat
-    sizeTree Tip = 0
+    sizeTree Tip              = 0
     sizeTree (Bin sz _ _ _ _) = sz
     -- Rotate the tree to the right to balance
     rotateRight : Map k v -> Map k v
     rotateRight (Bin _ kx x (Bin _ kl xl lll llr) right) =
-      Bin (sizeTree lll + sizeTree llr + sizeTree right + 2) kl xl lll (Bin (sizeTree llr + sizeTree right + 1) kx x llr right)
-    rotateRight t = t
+      Bin (sizeTree lll + sizeTree llr + sizeTree right + 2)
+          kl
+          xl
+          lll
+          (Bin (sizeTree llr + sizeTree right + 1) kx x llr right)
+    rotateRight t                                        = t
     -- Rotate the tree to the left to balance
     rotateLeft : Map k v -> Map k v
     rotateLeft (Bin _ kx x left (Bin _ kr xr rll rlr)) =
-      Bin (sizeTree left + sizeTree rll + sizeTree rlr + 2) kr xr (Bin (sizeTree left + sizeTree rll + 1) kx x left rll) rlr
-    rotateLeft t = t
+      Bin (sizeTree left + sizeTree rll + sizeTree rlr + 2)
+          kr
+          xr
+          (Bin (sizeTree left + sizeTree rll + 1) kx x left rll)
+          rlr
+    rotateLeft t                                       = t
     -- Balance the tree based on its size
     balanceTree : Map k v -> Map k v
-    balanceTree Tip = Tip
+    balanceTree Tip                       = Tip
     balanceTree t@(Bin sz k v left right) =
-      let diff = minus (sizeTree left) (sizeTree right) in
-      if diff > 1 then
-        rotateRight t
-      else if diff < -1 then
-        rotateLeft t
-      else
-        t
+      let diff = minus (sizeTree left) (sizeTree right)
+        in case diff > 1 of
+             True  =>
+               rotateRight t
+             False =>
+               case diff < -1 of
+                 True  =>
+                   rotateLeft t
+                 False =>
+                   t
     -- Check if the keys are not ordered
     not_ordered : k -> List (k,v) -> Bool
-    not_ordered _ [] = False
+    not_ordered _ []              = False
     not_ordered kx ((ky, _) :: _) = kx >= ky
     -- Insert elements into the map using 'insert', avoiding sequential insertions
     fromList' : Map k v -> List (k, v) -> Map k v
     fromList' t0 xs = foldl (\t, (k, x) => balanceTree (insert k x t)) t0 xs
     -- Create function with rebalancing to prevent skewed trees
     create : Map k v -> List (k, v) -> Map k v
-    create acc [] = acc
+    create acc []              = acc
     create acc ((kx, x) :: xs) =
-      if not_ordered kx xs then
-        fromList' (insert kx x acc) xs
-      else
-        create (balanceTree (insert kx x acc)) xs
+      case not_ordered kx xs of
+        True  =>
+          fromList' (insert kx x acc) xs
+        False =>
+          create (balanceTree (insert kx x acc)) xs
     -- Recursive function using structural recursion on the input list
     go : Map k v -> List (k,v) -> Map k v
-    go acc [] = acc
-    go acc [(kx, x)] = insertMax kx x acc
-    go acc ((kx, x) :: xs) =
-      if not_ordered kx xs then
-        fromList' acc ((kx, x) :: xs)
-      else
-        let newAcc = balanceTree (insert kx x acc) in
-        go newAcc xs
+    go acc []                = acc
+    go acc [(kx, x)]         = insertMax kx x acc
+    go acc l@((kx, x) :: xs) =
+      case not_ordered kx xs of
+        True  =>
+          fromList' acc l
+        False =>
+          let newAcc = balanceTree (insert kx x acc)
+            in go newAcc xs
 
 --------------------------------------------------------------------------------
 --          Keys
