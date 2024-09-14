@@ -1365,7 +1365,7 @@ Foldable (Map k) where
 
 private
 Show k => Show v => Show (List (k, v)) where
-  show xs = "fromList " ++ "[" ++ show' xs ++ "]"
+  show xs = "[" ++ show' xs ++ "]"
     where
       show'' : (k, v) -> String
       show'' (k, v) = "(" ++ show k ++ ", " ++ show v ++ ")"
@@ -1376,4 +1376,4 @@ Show k => Show v => Show (List (k, v)) where
 
 export
 Show (List (k, v)) => Show (Map k v) where
-  show = show . toList
+  show m = "fromList " ++ (show $ toList m)
