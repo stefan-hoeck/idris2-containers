@@ -1275,11 +1275,14 @@ toList = toAscList
 ||| If the list contains more than one value for the same key, the last value
 ||| for the key is retained.
 ||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
-
 export
 fromList : Ord (k, v) => Ord k => List (k, v) -> Map k v
 fromList [] = Tip
-fromList xs = buildBalancedTree (convertToList1 (sort xs))
+fromList xs = case sorted xs of
+                True  =>
+                  buildBalancedTree (convertToList1 xs) (length xs)
+                False =>
+                  buildBalancedTree (convertToList1 (sort xs)) (length xs)
   where
     -- Calculate the size of a tree
     sizeTree : Map k v -> Nat
@@ -1290,31 +1293,35 @@ fromList xs = buildBalancedTree (convertToList1 (sort xs))
     convertToList1 []        = assert_total $ idris_crash "Unexpected empty list"
     convertToList1 (x :: xs) = x ::: xs
     -- Link a root node with two subtrees
-    linkRootWithSubtrees : (k, v) -> Map k v -> Map k v -> Map k v
-    linkRootWithSubtrees (kx, x) left right =
-      let newSize = sizeTree left + sizeTree right + 1
-        in Bin newSize kx x left right
+    linkRootWithSubtrees : (k, v) -> Map k v -> Map k v -> Nat -> Map k v
+    linkRootWithSubtrees (kx, x) left right newSize =
+      Bin newSize kx x left right
     -- Split a non-empty list into left, middle, and right parts
-    splitList : List1 (k, v) -> (List (k, v), (k, v), List (k, v))
-    splitList l@(x ::: xs) =
-      let len          = length l
-          half         = len `div` 2
+    splitList : List1 (k, v) -> Nat -> (List (k, v), (k, v), List (k, v), Nat)
+    splitList l len =
+      let half         = len `div` 2
           (left, rest) = splitAt half (forget l)
         in case rest of
-             []                => assert_total $ idris_crash "Unexpected empty list"
-             (middle :: right) => (left, middle, right)
+             []                =>
+               assert_total $ idris_crash "Unexpected empty list"
+             (middle :: right) => 
+               (left, middle, right, len)
     -- Build a balanced tree from a non-empty list
-    buildBalancedTree : List1 (k, v) -> Map k v
-    buildBalancedTree ((kx, x) ::: []) = Bin 1 kx x Tip Tip
-    buildBalancedTree l@(x ::: xs)     =
-      let (left, root, right) = splitList l
+    buildBalancedTree : List1 (k, v) -> Nat -> Map k v
+    buildBalancedTree ((kx, x) ::: []) _   = Bin 1 kx x Tip Tip
+    buildBalancedTree xs               len =
+      let (left, root, right, totalSize) = splitList xs len
           leftTree = case left of
-                       [] => Tip
-                       _  => assert_total $ buildBalancedTree (convertToList1 left)
+                       [] =>
+                         Tip
+                       _  =>
+                         assert_total $ buildBalancedTree (convertToList1 left) (length left)
           rightTree = case right of
-                        [] => Tip
-                        _  => assert_total $ buildBalancedTree (convertToList1 right)
-        in linkRootWithSubtrees root leftTree rightTree
+                        [] =>
+                          Tip
+                        _  =>
+                          assert_total $ buildBalancedTree (convertToList1 right) (length right)
+        in linkRootWithSubtrees root leftTree rightTree totalSize
 
 --------------------------------------------------------------------------------
 --          Keys
