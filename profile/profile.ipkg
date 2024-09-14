@@ -1,6 +1,6 @@
 package containers-profile
 
-authors    = "stefan-hoeck"
+authors    = "stefan-hoeck and matthew-mosior"
 version    = 0.7.0
 sourcedir  = "src"
 depends    = containers
