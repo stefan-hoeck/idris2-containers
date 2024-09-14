@@ -1,0 +1,11 @@
+package containers-profile
+
+authors    = "stefan-hoeck"
+version    = 0.7.0
+sourcedir  = "src"
+depends    = containers
+           , elab-util
+           , profiler
+
+executable = "profile-containers"
+main       = Main
