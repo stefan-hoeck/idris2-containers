@@ -83,6 +83,7 @@ insert kx0 vx0 m = go kx0 kx0 vx0 m
             False =>
               Bin sz orig x l r
 
+private
 insertR : Eq (Map k v) => Eq v => Ord k => k -> v -> Map k v -> Map k v
 insertR kx0 = go kx0 kx0
   where
@@ -125,6 +126,7 @@ insertWith = go
         EQ =>
           Bin sy kx (f x y) l r
 
+private
 insertWithR : Ord k => (v -> v -> v) -> k -> v -> Map k v -> Map k v
 insertWithR = go
   where
@@ -139,6 +141,7 @@ insertWithR = go
         EQ =>
           Bin sy ky (f y x) l r
 
+private
 insertWithKeyR : Ord k => (k -> v -> v -> v) -> k -> v -> Map k v -> Map k v
 insertWithKeyR = go
   where
@@ -482,6 +485,7 @@ null _   = False
 --          Filter
 --------------------------------------------------------------------------------
 
+private
 splitMember : Ord k => k -> Map k v -> (Map k v,Bool,Map k v)
 splitMember k0 m = go k0 m
   where
@@ -677,6 +681,7 @@ mapEither f m = mapEitherWithKey (\_, x => f x) m
 --          Submap
 --------------------------------------------------------------------------------
 
+private
 submap' : Ord a => (b -> c -> Bool) -> Map a b -> Map a c -> Bool
 submap' _ Tip _              = True
 submap' _ _   Tip            = False
@@ -903,6 +908,7 @@ splitAt i m =
 --          Min/Max
 --------------------------------------------------------------------------------
 
+private
 lookupMinSure : k -> v -> Map k v -> (k,v)
 lookupMinSure k v Tip             = (k,v)
 lookupMinSure _ _ (Bin _ k v l _) = lookupMinSure k v l
@@ -913,6 +919,7 @@ lookupMin : Map k v -> Maybe (k,v)
 lookupMin Tip             = Nothing
 lookupMin (Bin _ k v l _) = Just $ lookupMinSure k v l
 
+private
 lookupMaxSure : k -> v -> Map k v -> (k,v)
 lookupMaxSure k v Tip             = (k,v)
 lookupMaxSure _ _ (Bin _ k v _ r) = lookupMaxSure k v r
