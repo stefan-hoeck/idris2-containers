@@ -19,30 +19,30 @@ createSortedMap n = SM.fromList $ map (\x => (x,plus x 1)) [0..n]
 insertMap : Nat -> Map Nat Nat
 insertMap n = do
   let m = M.fromList $ map (\x => (x,plus x 1)) [0..n]
-  let m = M.insert 1 2 m
-  let m = M.insert 3 4 m
-  let m = M.insert 4 5 m
-  let m = M.insert 6 7 m
-  let m = M.insert 8 9 m
-  let m = M.insert 10 11 m
-  let m = M.insert 12 13 m
-  let m = M.insert 14 15 m
-  let m = M.insert 16 17 m
-  M.insert 18 19 m
+  let m = M.insert 0 2 m
+  let m = M.insert 1 3 m
+  let m = M.insert 2 4 m
+  let m = M.insert 3 5 m
+  let m = M.insert 4 6 m
+  let m = M.insert 5 7 m
+  let m = M.insert 6 8 m
+  let m = M.insert 7 9 m
+  let m = M.insert 8 10 m
+  M.insert 9 11 m
 
 insertSortedMap : Nat -> SortedMap Nat Nat
 insertSortedMap n = do
   let m = SM.fromList $ map (\x => (x,plus x 1)) [0..n]
-  let m = SM.insert 1 2 m
-  let m = SM.insert 3 4 m
-  let m = SM.insert 4 5 m
-  let m = SM.insert 6 7 m
-  let m = SM.insert 8 9 m
-  let m = SM.insert 10 11 m
-  let m = SM.insert 12 13 m
-  let m = SM.insert 14 15 m
-  let m = SM.insert 16 17 m
-  SM.insert 18 19 m
+  let m = SM.insert 0 2 m
+  let m = SM.insert 1 3 m
+  let m = SM.insert 2 4 m
+  let m = SM.insert 3 5 m
+  let m = SM.insert 4 6 m
+  let m = SM.insert 5 7 m
+  let m = SM.insert 6 8 m
+  let m = SM.insert 7 9 m
+  let m = SM.insert 8 10 m
+  SM.insert 9 11 m
 
 deleteMap : Nat -> Map Nat Nat
 deleteMap n = do
