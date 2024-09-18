@@ -3,6 +3,8 @@ module Main
 import Data.List
 import Data.Map as M
 import Data.SortedMap as SM
+import Data.Set as S
+import Data.SortedSet as SS
 import Profile
 
 %default total
@@ -15,6 +17,12 @@ createMap n = M.fromList $ map (\x => (x,plus x 1)) [0..n]
 
 createSortedMap : Nat -> SortedMap Nat Nat
 createSortedMap n = SM.fromList $ map (\x => (x,plus x 1)) [0..n]
+
+createSet : Nat -> Set Nat
+createSet n = S.fromList $ map (\x => x) [0..n]
+
+createSortedSet : Nat -> SortedSet Nat
+createSortedSet n = SS.fromList $ map (\x => x) [0..n]
 
 insertMap : Nat -> Map Nat Nat
 insertMap n = do
@@ -167,7 +175,7 @@ valuesSortedMap n = do
   SM.values m
 
 bench : Benchmark Void
-bench = Group "map"
+bench = Group "containers"
   [ Group "List"
      [ Single "1"       (basic createList 0)
      , Single "100"     (basic createList 99)
@@ -183,6 +191,16 @@ bench = Group "map"
       , Single "100"    (basic createSortedMap 99)
       , Single "1000"   (basic createSortedMap 999)
       ]
+  , Group "fromListSet"
+      [ Single "1"       (basic createSet 0)
+      , Single "100"     (basic createSet 99)
+      , Single "1000"    (basic createSet 999)
+      ]
+  , Group "fromListSortedSet"
+      [ Single "1"      (basic createSortedSet 0)
+      , Single "100"    (basic createSortedSet 99)
+      , Single "1000"   (basic createSortedSet 999)
+      ]      
   , Group "insertMap"
       [ Single "10"      (basic insertMap 0)
       ]
