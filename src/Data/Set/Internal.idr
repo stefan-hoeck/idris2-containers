@@ -77,6 +77,7 @@ size (Bin _ _ l r) = 1 + size l + size r
   is larger, we currently use delta=3.
 -}
 
+export
 delta : Nat
 delta = 3
 

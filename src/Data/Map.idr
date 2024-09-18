@@ -1285,15 +1285,16 @@ toList = toAscList
 export
 fromList : Ord (k, v) => Ord k => List (k, v) -> Map k v
 fromList [] = Tip
-fromList xs = case sorted xs of
-                True  =>
-                  buildBalancedTree (convertToList1 xs) (length xs)
-                False =>
-                  buildBalancedTree (convertToList1 (sort xs)) (length xs)
+fromList xs =
+  case sorted xs of
+    True  =>
+      buildBalancedTree (convertToList1 xs) (length xs)
+    False =>
+      buildBalancedTree (convertToList1 (sort xs)) (length xs)
   where
     -- Calculate the size of a tree
     sizeTree : Map k v -> Nat
-    sizeTree Tip = 0
+    sizeTree Tip              = 0
     sizeTree (Bin sz _ _ _ _) = sz
     -- Convert a list to a List1, which requires the list to be non-empty
     convertToList1 : List (k, v) -> List1 (k, v)
