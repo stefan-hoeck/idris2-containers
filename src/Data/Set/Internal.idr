@@ -25,7 +25,7 @@ data Set a = Bin Size a (Set a) (Set a)
 --          Creating Sets
 --------------------------------------------------------------------------------
 
-||| Wrap a single value in a map
+||| Wrap a single value in a set.
 export
 singleton : a -> Set a
 singleton x = Bin 1 x Tip Tip

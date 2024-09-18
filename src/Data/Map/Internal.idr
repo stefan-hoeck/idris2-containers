@@ -37,7 +37,7 @@ data MaxView k a = MaxView' k a (Map k a)
 --          Creating Maps
 --------------------------------------------------------------------------------
 
-||| Wrap a single value in a map
+||| Wrap a single value in a map.
 export
 singleton : k -> a -> Map k a
 singleton k x = Bin 1 k x Tip Tip
