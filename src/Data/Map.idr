@@ -65,17 +65,19 @@ insert kx0 vx0 m = go kx0 kx0 vx0 m
     go orig kx x t@(Bin sz ky y l r) =
       case compare kx ky of
         LT =>
-          case (go orig kx x l) == l of
-            True  =>
-              t
-            False =>
-              balanceL ky y (go orig kx x l) r
+          let l' = go orig kx x l
+            in case l' == l of
+                 True  =>
+                   t
+                 False =>
+                   balanceL ky y l' r
         GT =>
-          case (go orig kx x r) == r of
-            True  =>
-              t
-            False =>
-              balanceR ky y l (go orig kx x r)
+          let r' = go orig kx x r
+            in case r' == r of
+                 True  =>
+                   t
+                 False =>
+                   balanceR ky y l r'
         EQ =>
           case (x == y && orig == ky) of
             True  =>
@@ -92,17 +94,19 @@ insertR kx0 = go kx0 kx0
     go orig kx x t@(Bin _ ky y l r) =
       case compare kx ky of
         LT =>
-          case (go orig kx x l) == l of
-            True  =>
-              t
-            False =>
-              balanceL ky y (go orig kx x l) r
+          let l' = go orig kx x l
+            in case l' == l of
+                 True  =>
+                   t
+                 False =>
+                   balanceL ky y l' r
         GT =>
-          case (go orig kx x r) == r of
-            True  =>
-              t
-            False =>
-              balanceR ky y l (go orig kx x r)
+          let r' = go orig kx x r
+            in case r' == r of
+                 True  =>
+                   t
+                 False =>
+                   balanceR ky y l r'
         EQ =>
           t
 
@@ -205,17 +209,19 @@ delete = go
     go k t@(Bin _ kx x l r) =
       case compare k kx of
         LT =>
-          case (go k l) == l of
-            True  =>
-              t
-            False =>
-              balanceR kx x (go k l) r
+          let l' = go k l
+            in case l' == l of
+                 True  =>
+                   t
+                 False =>
+                   balanceR kx x l' r
         GT =>
-          case (go k r) == r of
-            True  =>
-              t
-            False =>
-              balanceL kx x l (go k r)
+          let r' = go k r
+            in case r' == r of
+                 True  =>
+                   t
+                 False =>
+                   balanceL kx x l r'
         EQ =>
           glue l r
 
