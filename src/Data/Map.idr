@@ -1329,7 +1329,7 @@ fromList xs =
         in case rest of
              []                =>
                assert_total $ idris_crash "Unexpected empty list"
-             (middle :: right) => 
+             (middle :: right) =>
                (left, middle, right, len)
     -- Build a balanced tree from a non-empty list
     buildBalancedTree : List1 (k, v) -> Nat -> Map k v

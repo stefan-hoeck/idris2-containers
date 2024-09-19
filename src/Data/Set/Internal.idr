@@ -40,7 +40,7 @@ singleton x = Bin 1 x Tip Tip
 export
 size : Set a -> Nat
 size Tip           = 0
-size (Bin _ _ l r) = 1 + size l + size r 
+size (Bin _ _ l r) = 1 + size l + size r
 
 --------------------------------------------------------------------------------
 --          Set Internals
@@ -197,7 +197,7 @@ minViewSure : a -> Set a -> Set a -> (a,Set a)
 minViewSure x Tip              r = (x,r)
 minViewSure x (Bin _ xl ll lr) r =
   case minViewSure xl ll lr of
-    (xm, l') => 
+    (xm, l') =>
       (xm, balanceR x l' r)
 
 export

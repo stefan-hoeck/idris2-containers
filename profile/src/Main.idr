@@ -323,7 +323,7 @@ bench = Group "containers"
       [ Single "1"      (basic createSortedSet 0)
       , Single "100"    (basic createSortedSet 99)
       , Single "1000"   (basic createSortedSet 999)
-      ]      
+      ]
   , Group "insertMap"
       [ Single "10"      (basic insertMap 0)
       ]

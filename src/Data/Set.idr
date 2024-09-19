@@ -603,7 +603,7 @@ partial
 findMin : Set a -> a
 findMin t =
   case lookupMin t of
-    Just r  => r 
+    Just r  => r
     Nothing => assert_total $ idris_crash "Set.findMin: empty set has no minimal element"
 
 ||| The maximal element of the set. Calls idris_crash if the set is empty. O(log n)
@@ -724,7 +724,7 @@ intersection t1@(Bin _ x l1 r1) t2  =
   let (l2,x',r2) = splitMember x t2
       l1l2       = intersection l1 l2
       r1r2       = intersection r1 r2
-    in case x' of 
+    in case x' of
          True  =>
            case l1l2 == l1 && r1r2 == r1 of
              True  =>
@@ -790,7 +790,7 @@ fromList xs =
         in case rest of
              []                =>
                assert_total $ idris_crash "Unexpected empty list"
-             (middle :: right) => 
+             (middle :: right) =>
                (left, middle, right, len)
     -- Build a balanced tree from a non-empty list
     buildBalancedTree : List1 a -> Nat -> Set a
