@@ -441,6 +441,7 @@ lookupIndex = go 0
 ||| including, the size of the set. Calls idris_crash when the element is not
 ||| a member of the set. O(log n)
 export
+partial
 findIndex : Ord a => a -> Set a -> Nat
 findIndex = go 0
   where
@@ -459,6 +460,7 @@ findIndex = go 0
 ||| index in the sorted sequence of elements. If the index is out of range (less
 ||| than zero, greater or equal to size of the set), idris_crash is called. O(log n)
 export
+partial
 elemAt : Nat -> Set a -> a
 elemAt _ Tip           = assert_total $ idris_crash "Set.elemAt: index out of range"
 elemAt i (Bin _ x l r) =
@@ -474,6 +476,7 @@ elemAt i (Bin _ x l r) =
 ||| the sorted sequence of elements. If the index is out of range (less than zero,
 ||| greater or equal to size of the set), idris_crash is called. O(log n)
 export
+partial
 deleteAt : Nat -> Set a -> Set a
 deleteAt i t =
   case t of
@@ -596,14 +599,16 @@ lookupMax (Bin _ x _ r) = Just $ lookupMaxSure x r
 
 ||| The minimal element of the set. Calls idris_crash if the set is empty. O(log n)
 export
+partial
 findMin : Set a -> a
 findMin t =
   case lookupMin t of
-    Just r  => r
+    Just r  => r 
     Nothing => assert_total $ idris_crash "Set.findMin: empty set has no minimal element"
 
 ||| The maximal element of the set. Calls idris_crash if the set is empty. O(log n)
 export
+partial
 findMax : Set a -> a
 findMax t =
   case lookupMax t of
@@ -634,6 +639,7 @@ minView (Bin _ x l r) =
 
 ||| Delete and find the minimal element. O(log n)
 export
+partial
 deleteFindMin : Set a -> (a,Set a)
 deleteFindMin t =
   case minView t of
@@ -650,6 +656,7 @@ maxView (Bin _ x l r) =
 
 ||| Delete and find the maximal element. O(log n)
 export
+partial
 deleteFindMax : Set a -> (a,Set a)
 deleteFindMax t =
   case maxView t of
@@ -753,6 +760,7 @@ toList = toAscList
 ||| the last of each identical elemen is retained.
 ||| If the elements of the list are ordered, a linear-time implementation is used. O(n * log(n))
 export
+partial
 fromList : Ord a => List a -> Set a
 fromList [] = Tip
 fromList xs =

@@ -371,6 +371,7 @@ notMember k m = not $ member k m
 ||| Find the value at a key.
 ||| Calls idris_crash when the element can not be found. O(log n)
 export
+partial
 find : Ord k => k -> Map k v -> v
 find _ Tip              = assert_total $ idris_crash "Map.!: given key is not an element in the map"
 find k (Bin _ kx x l r) =
@@ -382,6 +383,7 @@ find k (Bin _ kx x l r) =
 ||| Find the value at a key.
 ||| Calls idris_crash when the element can not be found. O(log n)
 export
+partial
 (!!) : Ord k => Map k v -> k -> v
 (!!) m k = find k m
 
@@ -762,6 +764,7 @@ lookupIndex = go 0
 ||| including, the size of the map. Calls idris_crash when the key is not
 ||| a member of the map. O(log n)
 export
+partial
 findIndex : Ord k => k -> Map k v -> Nat
 findIndex = go 0
   where
@@ -780,6 +783,7 @@ findIndex = go 0
 ||| index in the sequence sorted by keys. If the index is out of range (less
 ||| than zero, greater or equal to size of the map), idris_crash is called. O(log n)
 export
+partial
 elemAt : Nat -> Map k v -> (k,v)
 elemAt _ Tip              = assert_total $ idris_crash "Map.elemAt: index out of range"
 elemAt i (Bin _ kx x l r) =
@@ -795,6 +799,7 @@ elemAt i (Bin _ kx x l r) =
 ||| the sequence sorted by keys. If the index is out of range (less than zero,
 ||| greater or equal to size of the map), idris_crash is called. O(log n)
 export
+partial
 updateAt : (k -> v -> Maybe v) -> Nat -> Map k v -> Map k v
 updateAt f i t =
   case t of
@@ -816,6 +821,7 @@ updateAt f i t =
 ||| the sequence sorted by keys. If the index is out of range (less than zero,
 ||| greater or equal to size of the map), idris_crash is called. O(log n)
 export
+partial
 deleteAt : Nat -> Map k v -> Map k v
 deleteAt i t =
   case t of
@@ -938,6 +944,7 @@ lookupMax (Bin _ k v _ r) = Just $ lookupMaxSure k v r
 
 ||| The minimal key of the map. Calls idris_crash if the map is empty. O(log n)
 export
+partial
 findMin : Map k v -> (k,v)
 findMin t =
   case lookupMin t of
@@ -946,6 +953,7 @@ findMin t =
 
 ||| The maximal key of the map. Calls idris_crash if the map is empty. O(log n)
 export
+partial
 findMax : Map k v -> (k,v)
 findMax t =
   case lookupMax t of
@@ -979,6 +987,7 @@ minViewWithKey (Bin _ k x l r) =
 
 ||| Delete and find the minimal element. O(log n)
 export
+partial
 deleteFindMin : Map k v -> ((k,v),Map k v)
 deleteFindMin t =
   case minViewWithKey t of
@@ -998,6 +1007,7 @@ maxViewWithKey (Bin _ k x l r) =
 
 ||| Delete and find the maximal element. O(log n)
 export
+partial
 deleteFindMax : Map k v -> ((k,v),Map k v)
 deleteFindMax t =
   case maxViewWithKey t of
@@ -1289,6 +1299,7 @@ toList = toAscList
 ||| for the key is retained.
 ||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
 export
+partial
 fromList : Ord (k, v) => Ord k => List (k, v) -> Map k v
 fromList [] = Tip
 fromList xs =
