@@ -19,10 +19,10 @@ createSortedMap : Nat -> SortedMap Nat Nat
 createSortedMap n = SM.fromList $ map (\x => (x,plus x 1)) [0..n]
 
 createSet : Nat -> Set Nat
-createSet n = S.fromList $ map (\x => x) [0..n]
+createSet n = S.fromList [0..n]
 
 createSortedSet : Nat -> SortedSet Nat
-createSortedSet n = SS.fromList $ map (\x => x) [0..n]
+createSortedSet n = SS.fromList [0..n]
 
 insertMap : Nat -> Map Nat Nat
 insertMap n = do
@@ -52,6 +52,34 @@ insertSortedMap n = do
   let m = SM.insert 8 10 m
   SM.insert 9 11 m
 
+insertSet : Nat -> Set Nat
+insertSet n = do
+  let s = S.fromList [0..n]
+  let s = S.insert 10 s
+  let s = S.insert 11 s
+  let s = S.insert 12 s
+  let s = S.insert 13 s
+  let s = S.insert 14 s
+  let s = S.insert 15 s
+  let s = S.insert 16 s
+  let s = S.insert 17 s
+  let s = S.insert 18 s
+  S.insert 19 s
+
+insertSortedSet : Nat -> SortedSet Nat
+insertSortedSet n = do
+  let s = SS.fromList [0..n]
+  let s = SS.insert 10 s
+  let s = SS.insert 11 s
+  let s = SS.insert 12 s
+  let s = SS.insert 13 s
+  let s = SS.insert 14 s
+  let s = SS.insert 15 s
+  let s = SS.insert 16 s
+  let s = SS.insert 17 s
+  let s = SS.insert 18 s
+  SS.insert 19 s
+
 deleteMap : Nat -> Map Nat Nat
 deleteMap n = do
   let m = M.fromList $ map (\x => (x,plus x 1)) [0..n]
@@ -79,6 +107,35 @@ deleteSortedMap n = do
   let m = SM.delete 2 m
   let m = SM.delete 1 m
   SM.delete 0 m
+
+
+deleteSet : Nat -> Set Nat
+deleteSet n = do
+  let m = S.fromList [0..n]
+  let m = S.delete 9 m
+  let m = S.delete 8 m
+  let m = S.delete 7 m
+  let m = S.delete 6 m
+  let m = S.delete 5 m
+  let m = S.delete 4 m
+  let m = S.delete 3 m
+  let m = S.delete 2 m
+  let m = S.delete 1 m
+  S.delete 0 m
+
+deleteSortedSet : Nat -> SortedSet Nat
+deleteSortedSet n = do
+  let m = SS.fromList [0..n]
+  let m = SS.delete 9 m
+  let m = SS.delete 8 m
+  let m = SS.delete 7 m
+  let m = SS.delete 6 m
+  let m = SS.delete 5 m
+  let m = SS.delete 4 m
+  let m = SS.delete 3 m
+  let m = SS.delete 2 m
+  let m = SS.delete 1 m
+  SS.delete 0 m
 
 updateMap : Nat -> Map Nat Nat
 updateMap n = do
@@ -174,6 +231,42 @@ valuesSortedMap n = do
   let m = SM.fromList $ map (\x => (x,plus x 1)) [0..n]
   SM.values m
 
+unionSet : Nat -> Set Nat
+unionSet n = do
+  let s  = S.fromList [0..n]
+  let s' = S.fromList [(n `div` 2)..n]
+  union s s'
+
+unionSortedSet : Nat -> SortedSet Nat
+unionSortedSet n = do
+  let s  = SS.fromList [0..n]
+  let s' = SS.fromList [(n `div` 2)..n]
+  union s s'
+
+differenceSet : Nat -> Set Nat
+differenceSet n = do
+  let s  = S.fromList [0..n]
+  let s' = S.fromList [(n `div` 2)..n]
+  difference s s'
+
+differenceSortedSet : Nat -> SortedSet Nat
+differenceSortedSet n = do
+  let s  = SS.fromList [0..n]
+  let s' = SS.fromList [(n `div` 2)..n]
+  difference s s'
+
+intersectionSet : Nat -> Set Nat
+intersectionSet n = do
+  let s  = S.fromList [0..n]
+  let s' = S.fromList [(n `div` 2)..n]
+  intersection s s'
+
+intersectionSortedSet : Nat -> SortedSet Nat
+intersectionSortedSet n = do
+  let s  = SS.fromList [0..n]
+  let s' = SS.fromList [(n `div` 2)..n]
+  intersection s s'
+
 bench : Benchmark Void
 bench = Group "containers"
   [ Group "List"
@@ -207,11 +300,23 @@ bench = Group "containers"
   , Group "insertSortedMap"
       [ Single "10"      (basic insertSortedMap 0)
       ]
+  , Group "insertSet"
+      [ Single "10"      (basic insertSet 0)
+      ]
+  , Group "insertSortedSet"
+      [ Single "10"      (basic insertSortedSet 0)
+      ]
   , Group "deleteMap"
       [ Single "10"      (basic deleteMap 9)
       ]
   , Group "deleteSortedMap"
       [ Single "10"      (basic deleteSortedMap 9)
+      ]
+  , Group "deleteSet"
+      [ Single "10"      (basic deleteSet 9)
+      ]
+  , Group "deleteSortedSet"
+      [ Single "10"      (basic deleteSortedSet 9)
       ]
   , Group "updateMap"
       [ Single "10"      (basic updateMap 9)
@@ -236,6 +341,24 @@ bench = Group "containers"
       ]
   , Group "valuesSortedMap"
       [ Single "1000000" (basic valuesSortedMap 999999)
+      ]
+  , Group "unionSet"
+      [ Single "1000000" (basic unionSet 999999)
+      ]
+  , Group "unionSortedSet"
+      [ Single "1000000" (basic unionSortedSet 999999)
+      ]
+  , Group "differenceSet"
+      [ Single "1000" (basic differenceSet 999)
+      ]
+  , Group "differenceSortedSet"
+      [ Single "1000" (basic differenceSortedSet 999)
+      ]
+  , Group "intersectionSet"
+      [ Single "1000" (basic intersectionSet 999)
+      ]
+  , Group "intersectionSortedSet"
+      [ Single "1000" (basic intersectionSortedSet 999)
       ]
   ]
 
