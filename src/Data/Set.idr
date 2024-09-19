@@ -306,8 +306,8 @@ disjoint (Bin _ x l r) t   =
 --          Merge
 --------------------------------------------------------------------------------
 
-private
 ||| Merges two trees.
+private
 merge : Set a -> Set a -> Set a
 merge Tip                   r                     = r
 merge l                     Tip                   = l
