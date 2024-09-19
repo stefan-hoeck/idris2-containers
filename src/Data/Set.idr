@@ -663,13 +663,14 @@ union t1                 (Bin 1 x _ _) = insertR x t1
 union (Bin 1 x _ _)      t2            = insert x t2
 union Tip                t2            = t2
 union t1@(Bin _ x l1 r1) t2            =
-  case split x t2 of
-    (l2,r2) =>
-      case (union l1 l2) == l1 && (union r1 r2) == r1 of
-        True  =>
-          t1
-        False =>
-          link x (union l1 l2) (union r1 r2)
+  let (l2,r2) = split x t2
+      l1l2    = union l1 l2
+      r1r2    = union r1 r2
+    in case l1l2 == l1 && r1r2 == r1 of
+         True  =>
+           t1
+         False =>
+           link x l1l2 r1r2
 
 --------------------------------------------------------------------------------
 --          Difference
@@ -682,13 +683,14 @@ difference : Ord a => Set a -> Set a -> Set a
 difference Tip _               = Tip
 difference t1  Tip             = t1
 difference t1  (Bin _ x l2 r2) =
-  case split x t1 of
-    (l1,r1) =>
-      case size (difference l1 l2) + size (difference r1 r2) == size t1 of
-        True  =>
-          t1
-        False =>
-          merge (difference l1 l2) (difference r1 r2)
+  let (l1, r1) = split x t1
+      l1l2     = difference l1 l2
+      r1r2     = difference r1 r2
+    in case size l1l2 + size r1r2 == size t1 of
+         True  =>
+           t1
+         False =>
+           merge l1l2 r1r2
 
 ||| Same as difference.
 export
@@ -706,15 +708,18 @@ intersection : Eq (Set a) => Ord a => Set a -> Set a -> Set a
 intersection Tip                _   = Tip
 intersection _                  Tip = Tip
 intersection t1@(Bin _ x l1 r1) t2  =
-  case splitMember x t2 of
-    (l2,True,r2) =>
-      case (intersection l1 l2) == l1 && (intersection r1 r2) == r1 of
-        True  =>
-          t1
-        False =>
-          link x (intersection l1 l2) (intersection r1 r2)
-    (l2,False,r2) =>
-      merge (intersection l1 l2) (intersection r1 r2)
+  let (l2,x',r2) = splitMember x t2
+      l1l2       = intersection l1 l2
+      r1r2       = intersection r1 r2
+    in case x' of 
+         True  =>
+           case l1l2 == l1 && r1r2 == r1 of
+             True  =>
+               t1
+             False =>
+               link x l1l2 r1r2
+         False =>
+           merge l1l2 r1r2
 
 --------------------------------------------------------------------------------
 --          Lists

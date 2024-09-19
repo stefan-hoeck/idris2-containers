@@ -211,6 +211,36 @@ lookupSortedMap n = do
   let v = SM.lookup 9 m
   m
 
+memberSet : Nat -> Set Nat
+memberSet n = do
+  let s = S.fromList [0..n]
+  let v = S.member 0 s
+  let v = S.member 1 s
+  let v = S.member 2 s
+  let v = S.member 3 s
+  let v = S.member 4 s
+  let v = S.member 5 s
+  let v = S.member 6 s
+  let v = S.member 0 s
+  let v = S.member 8 s
+  let v = S.member 9 s
+  s
+
+containsSortedSet : Nat -> SortedSet Nat
+containsSortedSet n = do
+  let s = SS.fromList [0..n]
+  let v = SS.contains 0 s
+  let v = SS.contains 1 s
+  let v = SS.contains 2 s
+  let v = SS.contains 3 s
+  let v = SS.contains 4 s
+  let v = SS.contains 5 s
+  let v = SS.contains 6 s
+  let v = SS.contains 0 s
+  let v = SS.contains 8 s
+  let v = SS.contains 9 s
+  s
+
 keysMap : Nat -> List Nat
 keysMap n = do
   let m = M.fromList $ map (\x => (x,plus x 1)) [0..n]
@@ -329,6 +359,12 @@ bench = Group "containers"
       ]
   , Group "lookupSortedMap"
       [ Single "10"      (basic lookupSortedMap 9)
+      ]
+  , Group "memberSet"
+      [ Single "10"      (basic memberSet 9)
+      ]
+  , Group "containsSortedSet"
+      [ Single "10"      (basic containsSortedSet 9)
       ]
   , Group "keysMap"
       [ Single "1000000" (basic keysMap 999999)
