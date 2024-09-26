@@ -85,7 +85,7 @@ export
 peekOldest : Queue a -> Maybe (a, Queue a)
 peekOldest q =
   case dequeue q of
-    Just (v,q') => Just (v, prepend v q')
+    Just (v,q') => Just (v, q)
     Nothing     => Nothing
 
 ||| Appends two `Queues`. O(m + n)
