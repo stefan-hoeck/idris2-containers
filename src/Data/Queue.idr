@@ -72,7 +72,7 @@ dequeue (Q front back) =
 ||| `peekOldest`.
 export
 prepend : a -> Queue a -> Queue a
-prepend x (Q f b) = Q f (b :< x)
+prepend x (Q f b) = Q (x::f) b
 
 ||| Return the last element of the queue, plus the unmodified
 ||| queue.
