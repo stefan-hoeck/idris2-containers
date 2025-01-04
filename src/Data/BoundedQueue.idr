@@ -75,7 +75,7 @@ enqueue (Q (F front@(f::fs) flimit fsize) (B back blimit bsize)) v =
     True  =>
       Q (F fs flimit fsize)
         (B (back :< v) blimit bsize)
-    False => 
+    False =>
       Q (F front flimit fsize)
         (B (back :< v) blimit (bsize `plus` 1))
 enqueue (Q (F [] flimit fsize) (B back blimit bsize))            v =
@@ -114,7 +114,7 @@ prepend x (Q (F front@(f::fs) flimit fsize) back) =
     True  =>
       Q (F (x::fs) flimit fsize)
         back
-    False => 
+    False =>
       Q (F (x::front) flimit (fsize `plus` 1))
         back
 prepend x (Q (F []            flimit _)     back) =
