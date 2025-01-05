@@ -84,7 +84,7 @@ enqueue (Q (F [] flimit fsize) (B back blimit bsize))            v =
   case blimit == bsize of
     True  =>
       case toList back of
-        (h::t) => 
+        (h::t) =>
           Just $
             Q (F t (length t) (length t))
               (B (Lin :< v) 1 1)
