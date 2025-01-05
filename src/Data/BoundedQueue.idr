@@ -69,18 +69,31 @@ toSnocList (Q (F front _ _) (B back _ _)) =
 
 ||| Append a value at the back of the `BoundedQueue`. O(1)
 export
-enqueue : BoundedQueue a -> a -> BoundedQueue a
+enqueue : BoundedQueue a -> a -> Maybe (BoundedQueue a)
 enqueue (Q (F front@(f::fs) flimit fsize) (B back blimit bsize)) v =
   case blimit == bsize of
     True  =>
-      Q (F fs flimit fsize)
-        (B (back :< v) blimit bsize)
+      Just $
+        Q (F fs flimit fsize)
+          (B (back :< v) blimit bsize)
     False =>
-      Q (F front flimit fsize)
-        (B (back :< v) blimit (bsize `plus` 1))
+      Just $
+        Q (F front flimit fsize)
+          (B (back :< v) blimit (bsize `plus` 1))
 enqueue (Q (F [] flimit fsize) (B back blimit bsize))            v =
-  Q (F [] flimit fsize)
-    (B (back :< v) blimit bsize)
+  case blimit == bsize of
+    True  =>
+      case toList back of
+        (h::t) => 
+          Just $
+            Q (F t (length t) (length t))
+              (B (Lin :< v) 1 1)
+        []     =>
+          Nothing
+    False =>
+      Just $
+        Q (F [] flimit fsize)
+          (B (back :< v) blimit bsize)
 
 ||| Take a value from the front of the queue.
 |||
