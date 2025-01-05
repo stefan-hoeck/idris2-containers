@@ -41,7 +41,7 @@ record BoundedQueue a where
 export %inline
 empty : Nat -> BoundedQueue a
 empty l =
-  Q (F [] l 0)
+  Q (F [] 0 0)
     (B [<] l 0)
 
 ||| Naively keeps the first `n` values of a list, and converts
@@ -50,14 +50,14 @@ export %inline
 fromList : Nat -> List a -> BoundedQueue a
 fromList n vs =
   Q (F (take n vs) n (length $ take n vs))
-    (B [<] n 0)
+    (B [<] 0 0)
 
 ||| Naively keeps the first `n` values of a `SnocList`, and converts
 ||| into a `BoundedQueue` (keeps the order of the elements). O(1)
 export %inline
 fromSnocList : Nat -> SnocList a -> BoundedQueue a
 fromSnocList n sv =
-  Q (F [] n 0)
+  Q (F [] 0 0)
     (B (cast $ take n $ toList sv) n (length $ take n $ toList sv))
 
 ||| Converts a `BoundedQueue` to a `SnocList`, keeping the order
@@ -98,7 +98,7 @@ dequeue (Q (F front flimit fsize) (B back blimit bsize)) =
                    )
     []     =>
       case back <>> [] of
-        h::t => Just (h, Q (F t flimit (length t)) (B [<] blimit 0))
+        h::t => Just (h, Q (F t (length t) (length t)) (B [<] 0 0))
         []   => Nothing
 
 ||| We can prepend an element to our `Queue`, making it the new
