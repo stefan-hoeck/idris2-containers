@@ -69,31 +69,28 @@ toSnocList (Q (F front _ _) (B back _ _)) =
 
 ||| Append a value at the back of the `BoundedQueue`. O(1)
 export
-enqueue : BoundedQueue a -> a -> Maybe (BoundedQueue a)
+enqueue : BoundedQueue a -> a -> BoundedQueue a
 enqueue (Q (F front@(f::fs) flimit fsize) (B back blimit bsize)) v =
   case blimit == bsize of
     True  =>
-      Just $
-        Q (F fs flimit fsize)
-          (B (back :< v) blimit bsize)
+      Q (F fs (flimit `minus` 1) (fsize `minus` 1))
+        (B (back :< v) (blimit `plus` 1) (bsize `plus` 1))
     False =>
-      Just $
-        Q (F front flimit fsize)
-          (B (back :< v) blimit (bsize `plus` 1))
+      Q (F front flimit fsize)
+        (B (back :< v) blimit (bsize `plus` 1))
 enqueue (Q (F [] flimit fsize) (B back blimit bsize))            v =
   case blimit == bsize of
     True  =>
       case toList back of
         (h::t) =>
-          Just $
-            Q (F t (length t) (length t))
-              (B (Lin :< v) 1 1)
+          Q (F t (bsize `minus` 1) (bsize `minus` 1))
+            (B (Lin :< v) 1 1)
         []     =>
-          Nothing
+          Q (F [] 0 0)
+            (B (Lin :< v) 1 1)
     False =>
-      Just $
-        Q (F [] flimit fsize)
-          (B (back :< v) blimit bsize)
+      Q (F [] flimit fsize)
+        (B (back :< v) blimit (bsize `plus` 1))
 
 ||| Take a value from the front of the queue.
 |||
@@ -106,13 +103,18 @@ export
 dequeue : BoundedQueue a -> Maybe (a, BoundedQueue a)
 dequeue (Q (F front flimit fsize) (B back blimit bsize)) =
   case front of
-    (h::t) => Just (h, Q (F t flimit (fsize `minus` 1))
-                         (B back blimit bsize)
-                   )
-    []     =>
+    h::t =>
+      Just (h, Q (F t flimit (fsize `minus` 1))
+                 (B back blimit bsize)
+           )
+    []   =>
       case back <>> [] of
-        h::t => Just (h, Q (F t (length t) (length t)) (B [<] 0 0))
-        []   => Nothing
+        h::t =>
+          Just (h, Q (F t (length t) (length t))
+                     (B [<] 0 0)
+               )
+        []   =>
+          Nothing
 
 ||| We can prepend an element to our `Queue`, making it the new
 ||| "oldest" element. O(1)
@@ -122,17 +124,27 @@ dequeue (Q (F front flimit fsize) (B back blimit bsize)) =
 ||| `peekOldest`.
 export
 prepend : a -> BoundedQueue a -> BoundedQueue a
-prepend x (Q (F front@(f::fs) flimit fsize) back) =
+prepend x (Q (F front@(f::fs) flimit fsize) (B back blimit bsize)) =
   case flimit == fsize of
     True  =>
       Q (F (x::fs) flimit fsize)
-        back
+        (B back blimit bsize)
     False =>
       Q (F (x::front) flimit (fsize `plus` 1))
-        back
-prepend x (Q (F []            flimit _)     back) =
-  Q (F [x] flimit 1)
-    back
+        (B back blimit bsize)
+prepend x (Q (F []            _      _)     (B back blimit bsize)) =
+  case blimit == bsize of
+    True  =>
+      case toList back of
+        h::t =>
+          Q (F [x] 1 1)
+            (B (cast t) blimit (bsize `minus` 1))
+        []   =>
+          Q (F [x] 1 1)
+            (B Lin 0 0)
+    False =>
+      Q (F [x] 1 1)
+        (B back blimit bsize)
 
 ||| Return the last element of the queue, plus the unmodified
 ||| queue.
