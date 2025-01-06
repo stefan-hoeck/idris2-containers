@@ -10,6 +10,9 @@ depends    = base         >= 0.6.0
 modules = Data.BoundedQueue
         , Data.Map
         , Data.Map.Internal
+        , Data.Seq.Internal
+        , Data.Seq.Sized
+        , Data.Seq.Unsized
         , Data.Set
         , Data.Set.Internal
         , Data.Queue
