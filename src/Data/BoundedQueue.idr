@@ -63,7 +63,7 @@ enqueue (Q queue queuelimit queuesize) v =
     False =>
       Q (queue `snoc` v) queuelimit (queuesize `plus` 1)
 
-||| Take a value from the front of the queue. O(1)
+||| Take a value from the front of the `BoundedQueue`. O(1)
 export
 dequeue : BoundedQueue a -> Maybe (a, BoundedQueue a)
 dequeue (Q queue queuelimit queuesize) =
@@ -73,7 +73,7 @@ dequeue (Q queue queuelimit queuesize) =
     Just (h, queue') =>
       Just (h, Q queue' queuelimit (queuesize `minus` 1))
 
-||| We can prepend an element to our `Queue`, making it the new
+||| We can prepend an element to our `BoundedQueue`, making it the new
 ||| "oldest" element. O(1)
 |||
 ||| This is against the typical use case for a FIFO data
@@ -92,7 +92,7 @@ prepend x (Q queue queuelimit queuesize) =
     False =>
       Q (x `cons` queue) queuelimit (queuesize `plus` 1)
 
-||| Return the last element of the queue, plus the unmodified
+||| Return the last element of the `BoundedQueue`, plus the unmodified
 ||| queue.
 |||
 ||| Note: `peekOldest` might involve a rearrangement of the elements
